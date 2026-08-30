@@ -22,6 +22,28 @@ type Filters = {
 
 type Sort = "attention" | "newest" | "oldest" | "priority";
 
+/**
+ * Which slice of the lifecycle the queue is showing. A ticket the requester has
+ * confirmed sits in `closed`, not `resolved`, so "done" has to mean both —
+ * exactly what the Resolved tab on My tickets means.
+ */
+type View = "open" | "done" | "all";
+
+const VIEWS: { key: View; label: string }[] = [
+  { key: "open", label: "Open" },
+  { key: "done", label: "Resolved" },
+  { key: "all", label: "All" },
+];
+
+const isDone = (status: string) => status === "resolved" || status === "closed";
+
+/** The dropdown filters one exact status, so the two terminal states need to
+ *  explain how they differ from each other. */
+const STATUS_OPTION_LABEL: Partial<Record<string, string>> = {
+  resolved: "Resolved · awaiting confirmation",
+  closed: "Closed · confirmed by requester",
+};
+
 const SORTS: { key: Sort; label: string }[] = [
   { key: "attention", label: "Needs attention" },
   { key: "newest", label: "Newest" },
@@ -50,8 +72,8 @@ export function QueueBoard({
   const [category, setCategory] = useState("");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<Sort>("attention");
-  const [showClosed, setShowClosed] = useState(
-    Boolean(initialFilters.status && !OPEN_STATUSES.includes(initialFilters.status as never)),
+  const [view, setView] = useState<View>(
+    initialFilters.status && isDone(initialFilters.status) ? "done" : "open",
   );
 
   const ruleIndex = useMemo(() => indexRules(rules), [rules]);
@@ -60,7 +82,11 @@ export function QueueBoard({
     const term = search.trim().toLowerCase();
 
     const filtered = tickets.filter((ticket) => {
-      if (!showClosed && !filters.status && !OPEN_STATUSES.includes(ticket.status)) return false;
+      // An explicit status filter is more specific than the view, so it wins.
+      if (!filters.status) {
+        if (view === "open" && isDone(ticket.status)) return false;
+        if (view === "done" && !isDone(ticket.status)) return false;
+      }
       if (filters.status && ticket.status !== filters.status) return false;
       if (filters.priority && ticket.priority !== filters.priority) return false;
       if (filters.department && ticket.department_id !== filters.department) return false;
@@ -119,7 +145,7 @@ export function QueueBoard({
       );
     }
     return sorted;
-  }, [tickets, filters, category, search, sort, showClosed, ruleIndex, viewerId]);
+  }, [tickets, filters, category, search, sort, view, ruleIndex, viewerId]);
 
   const summary = useMemo(() => {
     const open = tickets.filter((t) => OPEN_STATUSES.includes(t.status));
@@ -135,8 +161,16 @@ export function QueueBoard({
       breached,
       atRisk,
       unassigned: open.filter((t) => !t.assigned_to).length,
+      done: tickets.filter((t) => isDone(t.status)).length,
+      all: tickets.length,
     };
   }, [tickets, ruleIndex]);
+
+  const viewCounts: Record<View, number> = {
+    open: summary.open,
+    done: summary.done,
+    all: summary.all,
+  };
 
   const activeFilterCount =
     Object.values(filters).filter(Boolean).length + (category ? 1 : 0) + (search ? 1 : 0);
@@ -145,7 +179,7 @@ export function QueueBoard({
     setFilters({ sla: "", assignee: "", status: "", priority: "", department: "" });
     setCategory("");
     setSearch("");
-    setShowClosed(false);
+    setView("open");
   }
 
   return (
@@ -155,7 +189,7 @@ export function QueueBoard({
         <QuickFilter
           label="Open"
           value={summary.open}
-          active={!activeFilterCount}
+          active={view === "open" && !activeFilterCount}
           onClick={reset}
         />
         <QuickFilter
@@ -206,7 +240,7 @@ export function QueueBoard({
           <option value="">Any status</option>
           {TICKET_STATUSES.map((s) => (
             <option key={s} value={s}>
-              {STATUS_META[s].label}
+              {STATUS_OPTION_LABEL[s] ?? STATUS_META[s].label}
             </option>
           ))}
         </Select>
@@ -272,21 +306,43 @@ export function QueueBoard({
         )}
       </div>
 
-      {/* Sort + count */}
+      {/* Lifecycle view + count. Mirrors the tabs on My tickets so "Resolved"
+          means the same thing on both sides of the desk. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="tabular text-[0.8125rem] text-ink-muted">
-          {visible.length} ticket{visible.length === 1 ? "" : "s"}
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="inline-flex rounded-[10px] border border-line bg-surface-sunk p-0.5">
+            {VIEWS.map((item) => {
+              const active = item.key === view && !filters.status;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => {
+                    setView(item.key);
+                    setFilters((f) => ({ ...f, status: "" }));
+                  }}
+                  className={cn(
+                    "relative rounded-[7px] px-3 py-1.5 text-[0.8125rem] font-medium transition-colors",
+                    active ? "text-ink" : "text-ink-faint hover:text-ink-muted",
+                  )}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="queue-view"
+                      transition={{ type: "spring", stiffness: 480, damping: 36 }}
+                      className="absolute inset-0 -z-10 rounded-[7px] border border-line bg-surface shadow-[var(--shadow-sm)]"
+                    />
+                  )}
+                  {item.label}
+                  <span className="tabular ml-1.5 text-ink-faint">{viewCounts[item.key]}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="tabular text-[0.8125rem] text-ink-muted">
+            {visible.length} shown
+          </p>
+        </div>
         <div className="flex items-center gap-2">
-          <label className="flex cursor-pointer items-center gap-1.5 text-[0.75rem] text-ink-muted">
-            <input
-              type="checkbox"
-              checked={showClosed}
-              onChange={(e) => setShowClosed(e.target.checked)}
-              className="size-3.5 accent-[var(--accent)]"
-            />
-            Include resolved &amp; closed
-          </label>
           <div className="inline-flex rounded-[9px] border border-line bg-surface-sunk p-0.5">
             {SORTS.map((item) => {
               const active = item.key === sort;
@@ -318,11 +374,19 @@ export function QueueBoard({
         {visible.length === 0 ? (
           <EmptyState
             icon={<Icons.check />}
-            title={activeFilterCount ? "Nothing matches those filters" : "Queue is clear"}
+            title={
+              activeFilterCount
+                ? "Nothing matches those filters"
+                : view === "done"
+                  ? "Nothing finished yet"
+                  : "Queue is clear"
+            }
             description={
               activeFilterCount
                 ? "Try widening the filters or clearing them."
-                : "Every ticket is resolved or closed. Nice."
+                : view === "done"
+                  ? "Tickets appear here once an agent resolves them, and stay after the requester confirms."
+                  : "Every ticket is resolved or closed. Switch to Resolved to see them."
             }
             action={
               activeFilterCount ? (
