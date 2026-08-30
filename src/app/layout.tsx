@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
+import { cookies } from "next/headers";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast";
+import { THEME_COOKIE } from "@/lib/theme";
 import "./globals.css";
 
 const inter = Inter({
@@ -27,26 +29,17 @@ export const viewport: Viewport = {
   ],
 };
 
-/** Applies the stored theme before first paint so there is no flash. */
-const themeScript = `
-(function () {
-  try {
-    var stored = localStorage.getItem("aavis-theme");
-    var dark = stored ? stored === "dark"
-      : window.matchMedia("(prefers-color-scheme: dark)").matches;
-    document.documentElement.classList.toggle("dark", dark);
-  } catch (e) {
-    document.documentElement.classList.add("dark");
-  }
-})();
-`;
+/**
+ * The theme is resolved on the server from a cookie and written straight onto
+ * <html>, so the first paint is already correct. That avoids both the flash of
+ * the wrong theme and the inline bootstrap script a client-side read needs —
+ * a <script> inside the React tree logs a warning on every render.
+ */
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const theme = (await cookies()).get(THEME_COOKIE)?.value;
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
-      </head>
+    <html lang="en" className={theme === "light" ? undefined : "dark"} suppressHydrationWarning>
       <body className={`${inter.variable} ${mono.variable} antialiased`}>
         <ToastProvider>{children}</ToastProvider>
       </body>

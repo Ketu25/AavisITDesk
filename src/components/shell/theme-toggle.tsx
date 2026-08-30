@@ -1,19 +1,27 @@
 "use client";
 
+import { useEffect } from "react";
+import { persistTheme, readThemeCookie } from "@/lib/theme";
+
 /**
- * No React state: the source of truth is the `dark` class that the inline
- * script in the root layout sets before first paint. Both icons are rendered
- * and CSS picks one, which keeps this correct through SSR without an effect.
+ * No React state: the source of truth is the `dark` class the server put on
+ * <html>. Both icons render and CSS picks one, which keeps this correct
+ * through SSR without an effect or a hydration mismatch.
  */
 export function ThemeToggle() {
+  useEffect(() => {
+    // First visit only: adopt the OS preference and remember it, so the
+    // server renders the right theme from the next request onwards.
+    if (readThemeCookie()) return;
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.classList.toggle("dark", prefersDark);
+    persistTheme(prefersDark ? "dark" : "light");
+  }, []);
+
   function toggle() {
     const next = !document.documentElement.classList.contains("dark");
     document.documentElement.classList.toggle("dark", next);
-    try {
-      localStorage.setItem("aavis-theme", next ? "dark" : "light");
-    } catch {
-      // Private browsing: the theme just won't persist.
-    }
+    persistTheme(next ? "dark" : "light");
   }
 
   return (
