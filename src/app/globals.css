@@ -1,26 +1,228 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ===========================================================================
+   Theme tokens. Light is the base; .dark overrides. Every colour in the app
+   resolves through these so a theme switch never leaves a stale value behind.
+   =========================================================================== */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --canvas:        #f6f6f9;
+  --canvas-raised: #ffffff;
+  --surface:       #ffffff;
+  --surface-hover: #f1f1f6;
+  --surface-sunk:  #eeeef4;
+  --line:          rgb(14 14 34 / 0.09);
+  --line-strong:   rgb(14 14 34 / 0.17);
+  --ink:           #14141c;
+  --ink-muted:     #5b5b70;
+  --ink-faint:     #8a8a9e;
+  --accent:        #5b3df0;
+  --accent-ink:    #ffffff;
+  --accent-soft:   rgb(91 61 240 / 0.10);
+  --accent-line:   rgb(91 61 240 / 0.28);
+  --shadow-sm:     0 1px 2px rgb(14 14 34 / 0.05);
+  --shadow-md:     0 4px 16px -4px rgb(14 14 34 / 0.10);
+  --shadow-lg:     0 24px 60px -18px rgb(14 14 34 / 0.22);
+  --glow:          0 0 0 1px rgb(91 61 240 / 0.16), 0 8px 32px -10px rgb(91 61 240 / 0.35);
+  color-scheme: light;
+}
+
+.dark {
+  --canvas:        #08080c;
+  --canvas-raised: #0d0d14;
+  --surface:       rgb(255 255 255 / 0.026);
+  --surface-hover: rgb(255 255 255 / 0.052);
+  --surface-sunk:  rgb(0 0 0 / 0.28);
+  --line:          rgb(255 255 255 / 0.075);
+  --line-strong:   rgb(255 255 255 / 0.145);
+  --ink:           #eeeef5;
+  --ink-muted:     #8d8da6;
+  --ink-faint:     #5e5e78;
+  --accent:        #8062ff;
+  --accent-ink:    #0b0713;
+  --accent-soft:   rgb(128 98 255 / 0.15);
+  --accent-line:   rgb(128 98 255 / 0.35);
+  --shadow-sm:     0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-md:     0 8px 24px -8px rgb(0 0 0 / 0.6);
+  --shadow-lg:     0 30px 70px -20px rgb(0 0 0 / 0.8);
+  --glow:          0 0 0 1px rgb(128 98 255 / 0.28), 0 10px 40px -12px rgb(128 98 255 / 0.45);
+  color-scheme: dark;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-canvas:        var(--canvas);
+  --color-canvas-raised: var(--canvas-raised);
+  --color-surface:       var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-surface-sunk:  var(--surface-sunk);
+  --color-line:          var(--line);
+  --color-line-strong:   var(--line-strong);
+  --color-ink:           var(--ink);
+  --color-ink-muted:     var(--ink-muted);
+  --color-ink-faint:     var(--ink-faint);
+  --color-accent:        var(--accent);
+  --color-accent-ink:    var(--accent-ink);
+  --color-accent-soft:   var(--accent-soft);
+  --color-accent-line:   var(--accent-line);
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --radius-card: 14px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ===========================================================================
+   Semantic tones. Badges, meters and dots all read from one tone definition,
+   so a status colour is identical everywhere it appears — in either theme.
+   =========================================================================== */
+[data-tone] {
+  --tone-fg:  var(--ink-muted);
+  --tone-bg:  var(--surface);
+  --tone-bd:  var(--line);
+  --tone-dot: var(--ink-faint);
+}
+[data-tone="sky"]     { --tone-fg: #0369a1; --tone-bg: rgb(2 132 199 / 0.09);  --tone-bd: rgb(2 132 199 / 0.22);  --tone-dot: #0ea5e9; }
+[data-tone="violet"]  { --tone-fg: #6d28d9; --tone-bg: rgb(124 58 237 / 0.09); --tone-bd: rgb(124 58 237 / 0.22); --tone-dot: #8b5cf6; }
+[data-tone="amber"]   { --tone-fg: #b45309; --tone-bg: rgb(245 158 11 / 0.12); --tone-bd: rgb(245 158 11 / 0.28); --tone-dot: #f59e0b; }
+[data-tone="orange"]  { --tone-fg: #c2410c; --tone-bg: rgb(249 115 22 / 0.11); --tone-bd: rgb(249 115 22 / 0.26); --tone-dot: #f97316; }
+[data-tone="fuchsia"] { --tone-fg: #a21caf; --tone-bg: rgb(217 70 239 / 0.09); --tone-bd: rgb(217 70 239 / 0.22); --tone-dot: #d946ef; }
+[data-tone="emerald"] { --tone-fg: #047857; --tone-bg: rgb(16 185 129 / 0.10); --tone-bd: rgb(16 185 129 / 0.24); --tone-dot: #10b981; }
+[data-tone="rose"]    { --tone-fg: #be123c; --tone-bg: rgb(244 63 94 / 0.10);  --tone-bd: rgb(244 63 94 / 0.26);  --tone-dot: #f43f5e; }
+[data-tone="slate"]   { --tone-fg: #475569; --tone-bg: rgb(100 116 139 / 0.10);--tone-bd: rgb(100 116 139 / 0.22);--tone-dot: #64748b; }
+
+.dark [data-tone="sky"]     { --tone-fg: #7dd3fc; --tone-bg: rgb(56 189 248 / 0.12); --tone-bd: rgb(56 189 248 / 0.24); --tone-dot: #38bdf8; }
+.dark [data-tone="violet"]  { --tone-fg: #c4b5fd; --tone-bg: rgb(139 92 246 / 0.14); --tone-bd: rgb(139 92 246 / 0.28); --tone-dot: #a78bfa; }
+.dark [data-tone="amber"]   { --tone-fg: #fcd34d; --tone-bg: rgb(245 158 11 / 0.14); --tone-bd: rgb(245 158 11 / 0.28); --tone-dot: #fbbf24; }
+.dark [data-tone="orange"]  { --tone-fg: #fdba74; --tone-bg: rgb(249 115 22 / 0.14); --tone-bd: rgb(249 115 22 / 0.28); --tone-dot: #fb923c; }
+.dark [data-tone="fuchsia"] { --tone-fg: #f0abfc; --tone-bg: rgb(217 70 239 / 0.13); --tone-bd: rgb(217 70 239 / 0.26); --tone-dot: #e879f9; }
+.dark [data-tone="emerald"] { --tone-fg: #6ee7b7; --tone-bg: rgb(16 185 129 / 0.13); --tone-bd: rgb(16 185 129 / 0.26); --tone-dot: #34d399; }
+.dark [data-tone="rose"]    { --tone-fg: #fda4af; --tone-bg: rgb(244 63 94 / 0.14);  --tone-bd: rgb(244 63 94 / 0.30);  --tone-dot: #fb7185; }
+.dark [data-tone="slate"]   { --tone-fg: #cbd5e1; --tone-bg: rgb(148 163 184 / 0.11);--tone-bd: rgb(148 163 184 / 0.22);--tone-dot: #94a3b8; }
+
+@layer base {
+  * { border-color: var(--line); }
+
+  html { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+
+  body {
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  ::selection { background: var(--accent-soft); color: var(--ink); }
+
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line-strong);
+    border-radius: 99px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-clip: content-box; background-color: var(--ink-faint); }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 6px;
+  }
+
+  input, textarea, select, button { font: inherit; color: inherit; }
+  input::placeholder, textarea::placeholder { color: var(--ink-faint); }
+}
+
+@layer components {
+  /* Hairline card with a faint top highlight — the app's core surface. */
+  .card {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    box-shadow: var(--shadow-sm);
+  }
+  .dark .card::before {
+    content: "";
+    position: absolute;
+    inset: 0 0 auto 0;
+    height: 1px;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.10), transparent);
+    pointer-events: none;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    border-radius: 999px;
+    border: 1px solid var(--tone-bd);
+    background: var(--tone-bg);
+    color: var(--tone-fg);
+    padding: 0.125rem 0.5rem;
+    font-size: 0.6875rem;
+    font-weight: 550;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+
+  .tone-dot {
+    width: 0.375rem;
+    height: 0.375rem;
+    border-radius: 999px;
+    background: var(--tone-dot);
+    flex: none;
+  }
+
+  /* Grid backdrop for the auth screen. */
+  .grid-backdrop {
+    background-image:
+      linear-gradient(to right, var(--line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 20%, transparent 75%);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .text-pretty  { text-wrap: pretty; }
+
+  .tabular { font-variant-numeric: tabular-nums; }
+
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { scrollbar-width: none; }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, var(--surface-hover), transparent);
+  animation: shimmer 1.6s infinite;
+}
+
+@keyframes pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgb(52 211 153 / 0.5); }
+  70%  { box-shadow: 0 0 0 6px rgb(52 211 153 / 0); }
+  100% { box-shadow: 0 0 0 0 rgb(52 211 153 / 0); }
+}
+.pulse-ring { animation: pulse-ring 2s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
