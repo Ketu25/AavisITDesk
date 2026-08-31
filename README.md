@@ -52,6 +52,48 @@ rate limited to a handful of messages per hour and is meant for testing.
 Configure your own SMTP provider before bulk-importing ~100 people, or the
 import will stop partway with a rate-limit error (it tells you when it does).
 
+### 2b. Email templates — stop link scanners burning invites (important)
+
+Supabase's default invite email uses `{{ .ConfirmationURL }}`, which is a
+single-use link that is spent by whoever fetches it first. Corporate mail
+security — Microsoft 365 Safe Links, most gateways — fetches every URL in an
+incoming message to scan it. The scanner spends the token, the address gets
+confirmed with no human involved, and the real recipient clicks a dead link.
+
+This app defends against that: `/invite` and `/reset-password` never spend a
+token on page load, only when someone presses the button. To use that
+defence, point the templates at those pages.
+
+**Authentication → Emails → Templates → Invite user**, change the link to:
+
+```html
+<a href="{{ .SiteURL }}/invite?token_hash={{ .TokenHash }}&type=invite">
+  Set up your account
+</a>
+```
+
+**Authentication → Emails → Templates → Reset password**:
+
+```html
+<a href="{{ .SiteURL }}/reset-password?token_hash={{ .TokenHash }}&type=recovery">
+  Choose a new password
+</a>
+```
+
+Both pages also still accept the default `ConfirmationURL` style, so nothing
+breaks if you leave the templates alone — you just keep the scanner exposure.
+
+### 2c. Raise the auth email rate limit
+
+**This is separate from SMTP and catches almost everyone.** Supabase caps auth
+emails per hour *regardless of which provider sends them* — a new project
+allows only a couple. Once you exceed it, invites and resets return
+`429 email rate limit exceeded` and no email is sent at all.
+
+Raise it under **Authentication → Rate Limits → "Rate limit for sending
+emails"**. Note the built-in mailer is capped low no matter what you set there;
+a custom SMTP provider is what actually lets you raise it meaningfully.
+
 ### 3. First sign-in
 
 A bootstrap administrator already exists: **`aavisitdesk@gmail.com`**.
@@ -109,6 +151,13 @@ invited ──► pending ──► active ──► disabled ──► active (
 - **Disabling** blocks sign-in and kills live sessions immediately. It never
   deletes anything: tickets and comments stay attributed to that person. There
   is no delete path for accounts anywhere in the app or the RLS policies.
+- **Activation means a password was set, not an email confirmed.** A link
+  scanner can confirm an address; only a person can choose a password. An
+  account stays `pending` until `profiles.password_set_at` is filled, so a
+  scanned invite never looks accepted. **Resend invite** keys off the same
+  field, and clears a scanner-confirmed state so a fresh invite can be issued
+  (it refuses outright if a password already exists, so it cannot hijack a live
+  account).
 - **Email allow-list** — a domain list plus individual address exceptions,
   enforced server-side by `public.is_email_allowed()`, which is called both by
   the API and by a trigger on `profiles`. An address that fails it cannot be

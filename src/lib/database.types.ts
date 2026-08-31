@@ -92,6 +92,7 @@ export type Database = {
           invited_at: string | null;
           invited_by: string | null;
           last_invite_sent_at: string | null;
+          password_set_at: string | null;
           role: Database["public"]["Enums"]["user_role"];
           status: Database["public"]["Enums"]["user_status"];
           updated_at: string;
@@ -107,6 +108,7 @@ export type Database = {
           invited_at?: string | null;
           invited_by?: string | null;
           last_invite_sent_at?: string | null;
+          password_set_at?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
           status?: Database["public"]["Enums"]["user_status"];
           updated_at?: string;
@@ -316,6 +318,7 @@ export type Database = {
       is_agent: { Args: never; Returns: boolean };
       is_email_allowed: { Args: { p_email: string }; Returns: boolean };
       report_summary: { Args: { p_from?: string; p_to?: string }; Returns: Json };
+      reset_invite_state: { Args: { p_user_id: string }; Returns: boolean };
       run_sla_escalation: { Args: never; Returns: Json };
       sla_duration: { Args: { p_priority: Database["public"]["Enums"]["ticket_priority"] }; Returns: string };
     };

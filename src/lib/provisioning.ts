@@ -18,7 +18,16 @@ export function siteUrl() {
   );
 }
 
-export const INVITE_REDIRECT = `${siteUrl()}/auth/callback?next=/invite`;
+// Both link styles land on /invite: the default ConfirmationURL redirects
+// here with a session, and the recommended TokenHash template links here with
+// ?token_hash=, which the page spends only on an explicit click.
+export const INVITE_REDIRECT = `${siteUrl()}/invite`;
+
+/** Supabase applies its own auth-email cap regardless of the SMTP provider. */
+export const RATE_LIMIT_HELP =
+  "Supabase's auth email rate limit was hit. Raise it under Authentication -> " +
+  "Rate Limits, and configure a custom SMTP provider under Authentication -> " +
+  "Emails — the built-in mailer allows only a couple of messages an hour.";
 
 /**
  * The allow-list is checked in the database too (a trigger on profiles), but
@@ -79,11 +88,7 @@ export async function inviteUser(input: InviteInput, invitedBy: string) {
       throw new ApiError(409, `${input.email} already has an account.`);
     }
     if (error.status === 429) {
-      throw new ApiError(
-        429,
-        "Supabase's email rate limit was hit. Configure a custom SMTP provider in " +
-          "Supabase → Authentication → Emails to send invites in bulk.",
-      );
+      throw new ApiError(429, RATE_LIMIT_HELP);
     }
     throw new ApiError(error.status ?? 500, error.message);
   }
@@ -115,8 +120,13 @@ export async function sendPasswordReset(email: string) {
   );
 
   const { error } = await publicClient.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl()}/auth/callback?next=/reset-password`,
+    redirectTo: `${siteUrl()}/reset-password`,
   });
 
-  if (error) throw new ApiError(error.status ?? 500, error.message);
+  if (error) {
+    // A 429 here is the single most common reason "the email never arrived",
+    // so say what it is rather than surfacing "Request failed".
+    if (error.status === 429) throw new ApiError(429, RATE_LIMIT_HELP);
+    throw new ApiError(error.status ?? 500, error.message);
+  }
 }

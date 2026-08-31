@@ -89,8 +89,10 @@ export function UsersAdmin({
   async function act(key: string, run: () => Promise<unknown>, success: string) {
     setBusy(key);
     try {
-      await run();
-      push({ tone: "success", title: success });
+      const result = (await run()) as { message?: string } | undefined;
+      // Prefer the server's account of what happened — resend decides between
+      // an invite and a reset link, and the admin should see which was sent.
+      push({ tone: "success", title: result?.message ?? success });
       router.refresh();
     } catch (error) {
       push({
@@ -273,20 +275,20 @@ export function UsersAdmin({
                           disabled={!serviceKeyConfigured}
                           loading={busy === `resend-${user.id}`}
                           title={
-                            user.status === "pending"
-                              ? "Resend the invite email"
-                              : "Email a password reset link"
+                            user.password_set_at
+                              ? "Email a password reset link"
+                              : "Send a fresh invite — the previous link may have been spent by a mail scanner"
                           }
                           onClick={() =>
                             act(
                               `resend-${user.id}`,
                               () =>
                                 api(`/api/admin/users/${user.id}/resend`, { method: "POST" }),
-                              user.status === "pending" ? "Invite resent" : "Reset link sent",
+                              user.password_set_at ? "Reset link sent" : "Invite resent",
                             )
                           }
                         >
-                          {user.status === "pending" ? "Resend" : "Reset"}
+                          {user.password_set_at ? "Reset" : "Resend invite"}
                         </Button>
                       )}
 
@@ -337,11 +339,13 @@ export function UsersAdmin({
                     </div>
 
                     <p className="w-full text-[0.6875rem] text-ink-faint sm:w-auto sm:flex-none">
-                      {user.status === "pending"
-                        ? `Invited ${relativeTime(user.last_invite_sent_at ?? user.invited_at)}`
-                        : user.status === "disabled"
-                          ? `Disabled ${relativeTime(user.disabled_at)}`
-                          : `Active since ${relativeTime(user.activated_at)}`}
+                      {user.status === "disabled"
+                        ? `Disabled ${relativeTime(user.disabled_at)}`
+                        : user.password_set_at
+                          ? `Active since ${relativeTime(user.activated_at)}`
+                          : `Invited ${relativeTime(
+                              user.last_invite_sent_at ?? user.invited_at,
+                            )} · password not set yet`}
                     </p>
                   </motion.li>
                 );
