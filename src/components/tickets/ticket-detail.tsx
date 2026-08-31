@@ -117,6 +117,10 @@ export function TicketDetail({
   const nextStatuses = AGENT_NEXT_STATUS[ticket.status] ?? [];
   const canRequesterAct = viewer.isOwner && ticket.status === "resolved";
 
+  // Closed is terminal: the conversation is over for everyone. RLS and the API
+  // enforce it too — this just stops the UI offering something that would fail.
+  const isLocked = ticket.status === "closed";
+
   return (
     <>
       <PageHeader
@@ -209,6 +213,39 @@ export function TicketDetail({
               />
             </div>
 
+            {isLocked ? (
+              <div className="card flex flex-wrap items-center justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="text-[0.875rem] font-medium text-ink">
+                    This ticket is closed
+                  </p>
+                  <p className="mt-0.5 text-[0.8125rem] leading-relaxed text-ink-muted text-pretty">
+                    {viewer.isAgent
+                      ? "Move it back to In progress to add anything further — that keeps the history in order."
+                      : "The conversation is finished. If you still need help, raise a new ticket."}
+                  </p>
+                </div>
+                {viewer.isAgent ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={<Icons.refresh />}
+                    loading={busy === "in_progress"}
+                    onClick={() => mutate("in_progress", { status: "in_progress" })}
+                  >
+                    Reopen work
+                  </Button>
+                ) : (
+                  <Link
+                    href="/tickets/new"
+                    className="inline-flex h-8 flex-none items-center gap-1.5 rounded-[9px] border border-line-strong bg-surface px-3 text-[0.8125rem] font-medium text-ink transition-colors hover:bg-surface-hover"
+                  >
+                    <Icons.plus className="size-3.5" />
+                    New ticket
+                  </Link>
+                )}
+              </div>
+            ) : (
             <form onSubmit={postComment} className="card space-y-3 p-4">
               <Textarea
                 rows={3}
@@ -249,6 +286,7 @@ export function TicketDetail({
                 </Button>
               </div>
             </form>
+            )}
           </div>
 
           {/* ---------------------------------------------------- sidebar */}

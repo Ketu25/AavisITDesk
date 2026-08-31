@@ -202,6 +202,19 @@ duration and an at-risk percentage:
 - A resolved or closed ticket is judged once, against when it was actually
   resolved, and then reads *Met* or *Breached* permanently.
 
+### Closed is terminal
+
+A `closed` ticket accepts no further comments — from the requester *or* an
+agent. That is enforced by RLS, re-checked in the API route, and reflected in
+the UI, so a direct PostgREST call is refused the same way the hidden reply box
+is. It keeps the timeline honest: a reply can never appear after the closing
+event.
+
+`resolved` is deliberately still open to replies — that is the window in which
+the requester says "actually, this isn't fixed". An agent who needs to add
+something to a closed ticket moves it back to **In progress** first, which is
+recorded in `ticket_events`.
+
 ---
 
 ## Assignment
