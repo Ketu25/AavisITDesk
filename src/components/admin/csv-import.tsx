@@ -8,10 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { api, ApiClientError } from "@/lib/api";
 import { USER_ROLES } from "@/lib/database.types";
+import { CredentialsPanel } from "./credentials-panel";
 import { cn } from "@/lib/utils";
 
 type Row = Record<string, string | null>;
-type Result = { email: string; status: "invited" | "failed"; message?: string };
+type Result = {
+  email: string;
+  status: "created" | "failed";
+  name?: string;
+  temp_password?: string;
+  message?: string;
+};
 
 const TEMPLATE = `email,name,department,role
 priya.sharma@aavispharma.com,Priya Sharma,QA,user
@@ -53,6 +60,8 @@ export function CsvImport({
   const [dragging, setDragging] = useState(false);
 
   const departmentNames = new Set(departments.map((d) => d.name.toLowerCase()));
+  const activationUrl =
+    typeof window === "undefined" ? "/activate" : `${window.location.origin}/activate`;
 
   function ingest(text: string, name: string) {
     setParseError(null);
@@ -107,7 +116,7 @@ export function CsvImport({
   async function submit() {
     setLoading(true);
     try {
-      const response = await api<{ invited: number; failed: number; results: Result[] }>(
+      const response = await api<{ created: number; failed: number; results: Result[] }>(
         "/api/admin/users/import",
         // Only send rows that pass local validation; the rest are shown
         // above so the admin can fix them and re-run.
@@ -116,9 +125,11 @@ export function CsvImport({
       setResults(response.results);
       push({
         tone: response.failed === 0 ? "success" : "info",
-        title: `${response.invited} invited, ${response.failed} failed`,
+        title: `${response.created} created, ${response.failed} failed`,
         description:
-          response.failed > 0 ? "Review the rows below and re-run just those." : undefined,
+          response.failed > 0
+            ? "Review the rows below and re-run just those."
+            : "Copy the passwords before closing — they are not shown again.",
       });
       onDone();
     } catch (error) {
@@ -142,27 +153,43 @@ export function CsvImport({
 
   if (results) {
     const failed = results.filter((r) => r.status === "failed");
+    const created = results.filter((r) => r.status === "created" && r.temp_password);
+
     return (
       <div className="space-y-4">
         <div className="flex items-center gap-2">
-          <Badge tone="emerald">
-            {results.filter((r) => r.status === "invited").length} invited
-          </Badge>
+          <Badge tone="emerald">{created.length} created</Badge>
           {failed.length > 0 && <Badge tone="rose">{failed.length} failed</Badge>}
         </div>
 
+        {created.length > 0 && (
+          <CredentialsPanel
+            credentials={created.map((r) => ({
+              email: r.email,
+              full_name: r.name,
+              temp_password: r.temp_password!,
+            }))}
+            activationUrl={activationUrl}
+          />
+        )}
+
         {failed.length > 0 && (
-          <div className="max-h-64 overflow-y-auto rounded-xl border border-line">
-            <table className="w-full text-[0.8125rem]">
-              <tbody>
-                {failed.map((row, index) => (
-                  <tr key={index} className="border-b border-line last:border-b-0">
-                    <td className="w-1/2 px-3 py-2 font-mono text-xs text-ink">{row.email}</td>
-                    <td className="px-3 py-2 text-ink-muted">{row.message}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            <p className="mb-1.5 text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-faint">
+              Not created
+            </p>
+            <div className="max-h-48 overflow-y-auto rounded-xl border border-line">
+              <table className="w-full text-[0.8125rem]">
+                <tbody>
+                  {failed.map((row, index) => (
+                    <tr key={index} className="border-b border-line last:border-b-0">
+                      <td className="w-1/2 px-3 py-2 font-mono text-xs text-ink">{row.email}</td>
+                      <td className="px-3 py-2 text-ink-muted">{row.message}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -301,9 +328,9 @@ export function CsvImport({
           </div>
 
           <p className="text-[0.75rem] leading-relaxed text-ink-faint">
-            Supabase&apos;s built-in mailer is rate limited. For a batch this size, configure a
-            custom SMTP provider under Supabase → Authentication → Emails first, or import in
-            smaller groups.
+            Each person gets a generated temporary password, shown once after the import so you
+            can distribute them. Nothing is emailed, so a full company import runs in one pass
+            with no rate limit.
           </p>
 
           <div className="flex justify-end gap-2 border-t border-line pt-4">
@@ -311,8 +338,8 @@ export function CsvImport({
               Cancel
             </Button>
             <Button variant="primary" loading={loading} onClick={submit}>
-              Invite {rows.length - problems.length} {problems.length > 0 && "valid "}
-              {rows.length - problems.length === 1 ? "person" : "people"}
+              Create {rows.length - problems.length} {problems.length > 0 && "valid "}
+              {rows.length - problems.length === 1 ? "account" : "accounts"}
             </Button>
           </div>
         </>

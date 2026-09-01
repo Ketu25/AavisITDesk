@@ -28,6 +28,14 @@ export const inviteUserSchema = z.object({
   department: z.string().trim().min(1, "Pick a department.").optional().nullable(),
   department_id: z.string().uuid().optional().nullable(),
   role: z.enum(USER_ROLES).default("user"),
+  /** Blank means "generate one". Only used when delivery is "temp_password". */
+  password: z.string().trim().max(72).optional().nullable(),
+  /** Temporary passwords avoid Supabase's ~2/hour auth email cap entirely. */
+  delivery: z.enum(["temp_password", "email_invite"]).default("temp_password"),
+});
+
+export const tempPasswordSchema = z.object({
+  password: z.string().trim().max(72).optional().nullable(),
 });
 
 export const updateUserSchema = z

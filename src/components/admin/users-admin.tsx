@@ -12,11 +12,11 @@ import { EmptyState } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { Icons } from "@/components/shell/icons";
 import { CsvImport } from "./csv-import";
+import { CredentialsPanel, type IssuedCredential } from "./credentials-panel";
 import { api, ApiClientError } from "@/lib/api";
 import { ROLE_META, USER_STATUS_META } from "@/lib/constants";
 import { relativeTime } from "@/lib/format";
 import { USER_ROLES, type Profile, type UserRole } from "@/lib/database.types";
-import { cn } from "@/lib/utils";
 
 type Department = { id: string; name: string };
 
@@ -41,13 +41,38 @@ export function UsersAdmin({
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  const [inviteOpen, setInviteOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [reissued, setReissued] = useState<IssuedCredential[] | null>(null);
 
   // Staleness is measured against a clock read once on mount, so a re-render
   // never silently reclassifies a row mid-interaction.
   const [mountedAt] = useState(() => Date.now());
+
+  const activationUrl =
+    typeof window === "undefined" ? "/activate" : `${window.location.origin}/activate`;
+
+  /** Replaces the password, revokes live sessions, and shows the new one once. */
+  async function issueTempPassword(user: Profile) {
+    setBusy(`temp-${user.id}`);
+    try {
+      const result = await api<{ user: IssuedCredential }>(
+        `/api/admin/users/${user.id}/temp-password`,
+        { method: "POST", json: {} },
+      );
+      setReissued([result.user]);
+      router.refresh();
+    } catch (error) {
+      push({
+        tone: "error",
+        title: "Could not issue a password",
+        description: error instanceof ApiClientError ? error.message : "Please try again.",
+      });
+    } finally {
+      setBusy(null);
+    }
+  }
 
   const departmentName = useMemo(
     () => new Map(departments.map((d) => [d.id, d.name])),
@@ -165,9 +190,9 @@ export function UsersAdmin({
           variant="primary"
           icon={<Icons.plus className="size-3.5" />}
           disabled={!serviceKeyConfigured}
-          onClick={() => setInviteOpen(true)}
+          onClick={() => setAddOpen(true)}
         >
-          Invite
+          Add user
         </Button>
       </div>
 
@@ -268,27 +293,16 @@ export function UsersAdmin({
                     </Select>
 
                     <div className="flex flex-none items-center gap-1">
-                      {user.status !== "disabled" && (
+                      {user.status !== "disabled" && user.id !== viewerId && (
                         <Button
                           size="sm"
                           variant="ghost"
                           disabled={!serviceKeyConfigured}
-                          loading={busy === `resend-${user.id}`}
-                          title={
-                            user.password_set_at
-                              ? "Email a password reset link"
-                              : "Send a fresh invite — the previous link may have been spent by a mail scanner"
-                          }
-                          onClick={() =>
-                            act(
-                              `resend-${user.id}`,
-                              () =>
-                                api(`/api/admin/users/${user.id}/resend`, { method: "POST" }),
-                              user.password_set_at ? "Reset link sent" : "Invite resent",
-                            )
-                          }
+                          loading={busy === `temp-${user.id}`}
+                          title="Issue a new temporary password and show it once. Signs out any active session."
+                          onClick={() => issueTempPassword(user)}
                         >
-                          {user.password_set_at ? "Reset" : "Resend invite"}
+                          New password
                         </Button>
                       )}
 
@@ -355,13 +369,29 @@ export function UsersAdmin({
         )}
       </div>
 
-      <InviteModal
-        open={inviteOpen}
-        onClose={() => setInviteOpen(false)}
+      <AddUserModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
         departments={departments}
         allowedDomains={allowedDomains}
         onDone={() => router.refresh()}
       />
+
+      <Modal
+        open={Boolean(reissued)}
+        onClose={() => setReissued(null)}
+        title="Temporary password issued"
+        description="Any active session for this account has been signed out. Hand these details over directly."
+        size="lg"
+      >
+        {reissued && (
+          <CredentialsPanel
+            credentials={reissued}
+            activationUrl={activationUrl}
+            onDone={() => setReissued(null)}
+          />
+        )}
+      </Modal>
 
       <Modal
         open={importOpen}
@@ -405,7 +435,7 @@ function MiniStat({
   );
 }
 
-function InviteModal({
+function AddUserModal({
   open,
   onClose,
   departments,
@@ -423,34 +453,60 @@ function InviteModal({
   const [name, setName] = useState("");
   const [role, setRole] = useState<UserRole>("user");
   const [departmentId, setDepartmentId] = useState("");
+  const [password, setPassword] = useState("");
+  const [byEmail, setByEmail] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [issued, setIssued] = useState<IssuedCredential[] | null>(null);
+
+  const activationUrl =
+    typeof window === "undefined" ? "/activate" : `${window.location.origin}/activate`;
+
+  function reset() {
+    setEmail("");
+    setName("");
+    setRole("user");
+    setDepartmentId("");
+    setPassword("");
+    setError(null);
+    setIssued(null);
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
     setLoading(true);
     try {
-      await api("/api/admin/users", {
+      const result = await api<{
+        delivery: "temp_password" | "email_invite";
+        user: IssuedCredential;
+      }>("/api/admin/users", {
         method: "POST",
         json: {
           email,
           full_name: name,
           role,
           department_id: departmentId || null,
+          password: password || null,
+          delivery: byEmail ? "email_invite" : "temp_password",
         },
       });
-      push({
-        tone: "success",
-        title: "Invite sent",
-        description: `${email} will get a single-use link to set their own password.`,
-      });
-      setEmail("");
-      setName("");
-      setRole("user");
-      setDepartmentId("");
-      onClose();
+
       onDone();
+
+      if (result.delivery === "email_invite") {
+        push({
+          tone: "success",
+          title: "Invite emailed",
+          description: `${email} will get a link to set their own password.`,
+        });
+        reset();
+        onClose();
+        return;
+      }
+
+      // Stay open: this is the only time the password is visible.
+      setIssued([result.user]);
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Please try again.");
     } finally {
@@ -461,83 +517,154 @@ function InviteModal({
   return (
     <Modal
       open={open}
-      onClose={onClose}
-      title="Invite someone"
-      description="They'll receive a time-limited, single-use link to choose their own password."
+      onClose={() => {
+        onClose();
+        reset();
+      }}
+      title={issued ? "Account created" : "Add someone"}
+      description={
+        issued
+          ? "Hand these details to them directly — nothing was emailed."
+          : "Creates the account with a temporary password you give them yourself. No email is sent, so this is not subject to any mail rate limit."
+      }
+      size={issued ? "lg" : "md"}
     >
-      <form onSubmit={submit} className="space-y-4">
-        <Field
-          label="Work email"
-          htmlFor="invite-email"
-          required
-          error={error}
-          hint={
-            allowedDomains.length
-              ? `Allowed domains: ${allowedDomains.join(", ")}`
-              : "No domain allow-list is set — add one under Settings."
-          }
-        >
-          <Input
-            id="invite-email"
-            type="email"
+      {issued ? (
+        <CredentialsPanel
+          credentials={issued}
+          activationUrl={activationUrl}
+          onDone={() => {
+            onClose();
+            reset();
+          }}
+        />
+      ) : (
+        <form onSubmit={submit} className="space-y-4">
+          <Field
+            label="Work email"
+            htmlFor="add-email"
             required
-            autoFocus
-            value={email}
-            placeholder="name@aavispharma.com"
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </Field>
-
-        <Field label="Full name" htmlFor="invite-name" required>
-          <Input
-            id="invite-name"
-            required
-            value={name}
-            placeholder="Priya Sharma"
-            onChange={(e) => setName(e.target.value)}
-          />
-        </Field>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Department" htmlFor="invite-dept">
-            <Select
-              id="invite-dept"
-              value={departmentId}
-              onChange={(e) => setDepartmentId(e.target.value)}
-            >
-              <option value="">No department</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name}
-                </option>
-              ))}
-            </Select>
+            error={error}
+            hint={
+              allowedDomains.length
+                ? `Allowed domains: ${allowedDomains.join(", ")}`
+                : "No domain allow-list is set — add one under Settings."
+            }
+          >
+            <Input
+              id="add-email"
+              type="email"
+              required
+              autoFocus
+              value={email}
+              placeholder="name@aavispharma.com"
+              onChange={(e) => setEmail(e.target.value)}
+            />
           </Field>
 
-          <Field label="Role" htmlFor="invite-role" hint={ROLE_META[role].blurb}>
-            <Select
-              id="invite-role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-            >
-              {USER_ROLES.map((r) => (
-                <option key={r} value={r}>
-                  {ROLE_META[r].label}
-                </option>
-              ))}
-            </Select>
+          <Field label="Full name" htmlFor="add-name" required>
+            <Input
+              id="add-name"
+              required
+              value={name}
+              placeholder="Priya Sharma"
+              onChange={(e) => setName(e.target.value)}
+            />
           </Field>
-        </div>
 
-        <div className={cn("flex justify-end gap-2 border-t border-line pt-4")}>
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary" loading={loading}>
-            Send invite
-          </Button>
-        </div>
-      </form>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Department" htmlFor="add-dept">
+              <Select
+                id="add-dept"
+                value={departmentId}
+                onChange={(e) => setDepartmentId(e.target.value)}
+              >
+                <option value="">No department</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+
+            <Field label="Role" htmlFor="add-role" hint={ROLE_META[role].blurb}>
+              <Select
+                id="add-role"
+                value={role}
+                onChange={(e) => setRole(e.target.value as UserRole)}
+              >
+                {USER_ROLES.map((r) => (
+                  <option key={r} value={r}>
+                    {ROLE_META[r].label}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          </div>
+
+          {!byEmail && (
+            <Field
+              label="Temporary password"
+              htmlFor="add-password"
+              hint="Leave blank to generate a strong one. They must replace it before they can use the desk."
+            >
+              <div className="flex gap-2">
+                <Input
+                  id="add-password"
+                  value={password}
+                  placeholder="Generated automatically"
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setPassword(generateReadablePassword())}
+                >
+                  Generate
+                </Button>
+              </div>
+            </Field>
+          )}
+
+          <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-line bg-surface-sunk p-3">
+            <input
+              type="checkbox"
+              checked={byEmail}
+              onChange={(e) => setByEmail(e.target.checked)}
+              className="mt-0.5 size-3.5 accent-[var(--accent)]"
+            />
+            <span className="min-w-0">
+              <span className="block text-[0.8125rem] font-medium text-ink">
+                Email them an invite link instead
+              </span>
+              <span className="mt-0.5 block text-xs leading-relaxed text-ink-faint">
+                Uses Supabase&apos;s mailer, which allows only a couple of messages an hour.
+                Fine for one person, not for onboarding a team.
+              </span>
+            </span>
+          </label>
+
+          <div className="flex justify-end gap-2 border-t border-line pt-4">
+            <Button type="button" variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" variant="primary" loading={loading}>
+              {byEmail ? "Send invite" : "Create account"}
+            </Button>
+          </div>
+        </form>
+      )}
     </Modal>
   );
+}
+
+/** Mirrors the server generator: unambiguous characters, grouped for reading
+ *  aloud. The server generates its own when this is left blank. */
+function generateReadablePassword() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789abcdefghijkmnpqrstuvwxyz";
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  const chars = Array.from(bytes, (b) => alphabet[b % alphabet.length]);
+  return `${chars.slice(0, 4).join("")}-${chars.slice(4, 8).join("")}-${chars.slice(8, 12).join("")}`;
 }

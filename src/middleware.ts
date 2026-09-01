@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 /** Paths reachable without a session. Everything else requires one. */
 const PUBLIC_PATHS = [
   "/login",
+  "/activate",
   "/invite",
   "/forgot-password",
   "/reset-password",

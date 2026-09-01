@@ -48,6 +48,12 @@ async function rejectInactive(status: string): Promise<never> {
 export async function requireUser(): Promise<AuthContext> {
   const ctx = await getAuthContext();
   if (!ctx) redirect("/login");
+
+  // Still on an admin-issued temporary password. The session is valid, but the
+  // only thing it may do is replace that password — so send it there rather
+  // than signing it out, which would strand the person in a loop.
+  if (ctx.profile.must_change_password) redirect("/activate");
+
   if (ctx.profile.status !== "active") await rejectInactive(ctx.profile.status);
   return ctx;
 }

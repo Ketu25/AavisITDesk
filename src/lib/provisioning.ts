@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomBytes } from "node:crypto";
+
 import { createClient as createPublicClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api-auth";
@@ -129,4 +131,173 @@ export async function sendPasswordReset(email: string) {
     if (error.status === 429) throw new ApiError(429, RATE_LIMIT_HELP);
     throw new ApiError(error.status ?? 500, error.message);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Temporary-password provisioning
+// ---------------------------------------------------------------------------
+
+/**
+ * Ambiguous glyphs are removed on purpose: these get read off a screen, typed
+ * by hand, or dictated over a desk, so 0/O and 1/l/I cause real support calls.
+ * Three groups of four from a 28-character alphabet is ~57 bits of entropy.
+ */
+const TEMP_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789abcdefghijkmnpqrstuvwxyz";
+
+export function generateTempPassword() {
+  const bytes = randomBytes(12);
+  const chars = Array.from(bytes, (b) => TEMP_ALPHABET[b % TEMP_ALPHABET.length]);
+  return `${chars.slice(0, 4).join("")}-${chars.slice(4, 8).join("")}-${chars.slice(8, 12).join("")}`;
+}
+
+async function tempPasswordExpiry() {
+  const admin = createAdminClient();
+  const { data } = await admin.from("app_settings").select("invite_expiry_hours").maybeSingle();
+  const hours = data?.invite_expiry_hours ?? 48;
+  return new Date(Date.now() + hours * 3600_000).toISOString();
+}
+
+/**
+ * Records the pending state together with a fingerprint of the password hash
+ * that was just written. Activation later requires that hash to have changed,
+ * which is what makes "they must replace it" enforceable rather than advisory.
+ */
+async function stampTempPassword(userId: string) {
+  const admin = createAdminClient();
+  const { error } = await admin.rpc("stamp_temp_password", {
+    p_user_id: userId,
+    p_expires: await tempPasswordExpiry(),
+  });
+
+  if (error) {
+    throw new ApiError(500, `The account was created but could not be marked pending: ${error.message}`);
+  }
+}
+
+export type CreatedUser = {
+  id: string;
+  email: string;
+  full_name: string;
+  temp_password: string;
+  expires_at: string;
+};
+
+/**
+ * Creates an account that is immediately sign-in-able with a temporary
+ * password, but cannot use the app until that password is replaced. No email
+ * is sent — the admin hands the credentials over out of band.
+ */
+export async function createUserWithTempPassword(
+  input: InviteInput & { password?: string | null },
+  createdBy: string,
+): Promise<CreatedUser> {
+  await assertEmailAllowed(input.email);
+
+  const password = input.password?.trim() || generateTempPassword();
+
+  if (password.length < 8) {
+    throw new ApiError(422, "A temporary password must be at least 8 characters.");
+  }
+
+  const admin = createAdminClient();
+  const { data, error } = await admin.auth.admin.createUser({
+    email: input.email,
+    password,
+    // Confirmed up front: there is no email round-trip in this flow, so an
+    // unconfirmed address would just block sign-in for no benefit.
+    email_confirm: true,
+    user_metadata: {
+      full_name: input.full_name,
+      role: input.role,
+      department_id: input.department_id ?? "",
+      invited_by: createdBy,
+      // Read by the auth trigger: creates the profile as pending, owing a change.
+      must_change_password: true,
+    },
+  });
+
+  if (error) {
+    if (error.status === 422 || /already/i.test(error.message)) {
+      throw new ApiError(409, `${input.email} already has an account.`);
+    }
+    throw new ApiError(error.status ?? 500, error.message);
+  }
+  if (!data.user) throw new ApiError(500, "The account was not created.");
+
+  // The auth trigger creates the profile from the metadata above; make sure
+  // role and department landed even if the row already existed.
+  await admin
+    .from("profiles")
+    .update({
+      full_name: input.full_name,
+      role: input.role,
+      department_id: input.department_id,
+      invited_by: createdBy,
+    })
+    .eq("id", data.user.id);
+
+  await stampTempPassword(data.user.id);
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("temp_password_expires_at")
+    .eq("id", data.user.id)
+    .maybeSingle();
+
+  return {
+    id: data.user.id,
+    email: input.email,
+    full_name: input.full_name,
+    temp_password: password,
+    expires_at: profile?.temp_password_expires_at ?? "",
+  };
+}
+
+/** Re-issues a temporary password for an existing account (lost password, or
+ *  an expired one). The account drops back to pending until it is replaced. */
+export async function issueTempPassword(
+  userId: string,
+  password?: string | null,
+): Promise<CreatedUser> {
+  const admin = createAdminClient();
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("id, email, full_name, status")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (!profile) throw new ApiError(404, "That account no longer exists.");
+  if (profile.status === "disabled") {
+    throw new ApiError(422, "Re-enable the account before issuing a new password.");
+  }
+
+  const next = password?.trim() || generateTempPassword();
+  if (next.length < 8) {
+    throw new ApiError(422, "A temporary password must be at least 8 characters.");
+  }
+
+  const { error } = await admin.auth.admin.updateUserById(userId, {
+    password: next,
+    email_confirm: true,
+  });
+  if (error) throw new ApiError(error.status ?? 500, error.message);
+
+  // Existing sessions must not survive a credential reset.
+  await admin.auth.admin.signOut(userId, "global").catch(() => {});
+  await stampTempPassword(userId);
+
+  const { data: updated } = await admin
+    .from("profiles")
+    .select("temp_password_expires_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  return {
+    id: profile.id,
+    email: profile.email,
+    full_name: profile.full_name,
+    temp_password: next,
+    expires_at: updated?.temp_password_expires_at ?? "",
+  };
 }

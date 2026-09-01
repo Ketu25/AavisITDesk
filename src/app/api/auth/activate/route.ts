@@ -1,39 +1,27 @@
 import { NextResponse } from "next/server";
 import { getAuthContext } from "@/lib/auth";
-import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { apiError, ApiError } from "@/lib/api-auth";
 
 /**
- * Flips the *caller's own* profile from pending to active after they set a
- * password. It can never touch another account and never re-enables a
- * disabled one.
+ * Turns the caller's own pending account into a live one, but only after the
+ * database has confirmed the stored password hash differs from the one
+ * recorded when the temporary password was issued.
+ *
+ * That check is the whole point: without it a session holding a temporary
+ * password could call this endpoint and skip the change entirely.
  */
 export async function POST() {
   try {
     const ctx = await getAuthContext();
     if (!ctx) throw new ApiError(401, "You are not signed in.");
 
-    if (ctx.profile.status !== "pending") {
-      return NextResponse.json({ status: ctx.profile.status });
-    }
+    const supabase = await createClient();
+    const { data, error } = await supabase.rpc("complete_activation");
 
-    if (!hasServiceRoleKey()) {
-      throw new ApiError(
-        503,
-        "Account activation is unavailable: SUPABASE_SERVICE_ROLE_KEY is not configured.",
-      );
-    }
+    if (error) throw new ApiError(403, error.message);
 
-    const admin = createAdminClient();
-    const { error } = await admin
-      .from("profiles")
-      .update({ status: "active", activated_at: new Date().toISOString() })
-      .eq("id", ctx.userId)
-      .eq("status", "pending");
-
-    if (error) throw new ApiError(500, error.message);
-
-    return NextResponse.json({ status: "active" });
+    return NextResponse.json(data);
   } catch (error) {
     return apiError(error);
   }

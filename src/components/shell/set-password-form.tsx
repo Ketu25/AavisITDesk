@@ -28,14 +28,7 @@ const STRENGTH = [
   { label: "Strong", tone: "bg-[#10b981]" },
 ];
 
-export function SetPasswordForm({
-  submitLabel,
-  activateAfter = false,
-}: {
-  submitLabel: string;
-  /** Invite acceptance also flips the profile from pending to active. */
-  activateAfter?: boolean;
-}) {
+export function SetPasswordForm({ submitLabel }: { submitLabel: string }) {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -59,6 +52,8 @@ export function SetPasswordForm({
 
     setLoading(true);
     const supabase = createClient();
+    // Clearing the marker in the same call is what tells the auth trigger this
+    // password was chosen by the holder, not issued by an admin.
     const { error: updateError } = await supabase.auth.updateUser({ password });
 
     if (updateError) {
@@ -67,11 +62,9 @@ export function SetPasswordForm({
       return;
     }
 
-    if (activateAfter) {
-      // Belt and braces: the DB trigger normally activates on email
-      // confirmation, this covers the case where it did not fire.
-      await fetch("/api/auth/activate", { method: "POST" }).catch(() => {});
-    }
+    // The server verifies the password hash actually changed before granting
+    // access, so this is the step that turns a pending account into a live one.
+    await fetch("/api/auth/activate", { method: "POST" }).catch(() => {});
 
     router.push("/dashboard");
     router.refresh();

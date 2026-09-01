@@ -13,7 +13,7 @@ export function InviteClient() {
         actionLabel="Set up my account"
         intro="Press the button below to accept your invitation, then choose a password."
       >
-        <SetPasswordForm submitLabel="Activate my account" activateAfter />
+        <SetPasswordForm submitLabel="Activate my account" />
       </TokenGate>
     </Suspense>
   );

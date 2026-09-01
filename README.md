@@ -163,9 +163,46 @@ invited ──► pending ──► active ──► disabled ──► active (
   the API and by a trigger on `profiles`. An address that fails it cannot be
   inserted even with a direct database call.
 
+### How accounts are created
+
+Supabase's built-in mailer allows only a couple of auth emails an hour, which
+makes email-delivered invites unusable for onboarding a company. The default
+path therefore sends no email at all:
+
+1. **People → Add user.** Enter work email, full name, department and role.
+   Leave the password blank to generate a strong one, or type your own.
+2. The account is created immediately and the temporary password is shown
+   **once**, with copy and CSV download. It is never stored in readable form —
+   a lost one is reissued, not recovered.
+3. Send the person that password and the link to **`/activate`** however you
+   like — chat, in person, a phone call.
+4. They enter their email, the temporary password, and a password of their own.
+   From that moment the temporary one is dead.
+
+Until they do step 4, the account is `pending`: it can authenticate, and that
+is all. `is_active_user()` is false, so every RLS policy fails closed; every
+page redirects to `/activate`; every API route returns 403. Verified by
+signing in with a temporary password and confirming zero tickets, zero
+departments and only the account's own profile row are reachable.
+
+**Activation cannot be faked.** The database records a fingerprint of the
+password hash when the temporary password is issued, and grants activation only
+when the current hash differs. A session that calls the activation endpoint
+without actually changing its password is refused.
+
+Temporary passwords expire after the window in **Settings → Invite link
+validity** (48 hours by default). After that an admin issues a new one with
+**New password** on the People row, which also signs out any live session for
+that account.
+
+Email invites are still available — tick *"Email them an invite link instead"* —
+and *Forgot your password?* still works on the login page. Both remain subject
+to the mail rate limit, so they are a fallback rather than the default.
+
 ### Bulk import
 
-**People → Import CSV**. Header row required:
+**People → Import CSV**. Header row required (no password column — one is
+generated per person):
 
 ```csv
 email,name,department,role
@@ -175,8 +212,12 @@ sam.oduya@aavispharma.com,Sam Oduya,IT,agent
 
 `role` defaults to `user`. `department` must match an existing department name
 (case-insensitive). Rows are validated in the browser first and shown with
-per-row problems; only valid rows are submitted, and each row is invited
+per-row problems; only valid rows are submitted, and each row is created
 independently so one bad address never aborts the batch. Limit 500 rows.
+
+Every generated password is shown once after the import, with **Copy all** and
+**Download CSV** so you can distribute them. Nothing is emailed, so a full
+company import runs in one pass with no rate limit.
 
 ---
 

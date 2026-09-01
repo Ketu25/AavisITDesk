@@ -20,6 +20,11 @@ export class ApiError extends Error {
 export async function requireApiUser(): Promise<AuthContext> {
   const ctx = await getAuthContext();
   if (!ctx) throw new ApiError(401, "You are not signed in.");
+
+  // A temporary password authenticates, but grants nothing until replaced.
+  if (ctx.profile.must_change_password) {
+    throw new ApiError(403, "Set a new password before using the desk.");
+  }
   if (ctx.profile.status !== "active") {
     throw new ApiError(403, "This account is not active.");
   }

@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, ApiError, requireApiAdmin } from "@/lib/api-auth";
-import { inviteUser, resolveDepartment } from "@/lib/provisioning";
+import { createUserWithTempPassword, resolveDepartment } from "@/lib/provisioning";
 import { USER_ROLES } from "@/lib/database.types";
 
 const rowSchema = z.object({
@@ -13,7 +13,9 @@ const rowSchema = z.object({
     .trim()
     .toLowerCase()
     .optional()
-    .transform((v) => (v && USER_ROLES.includes(v as never) ? (v as (typeof USER_ROLES)[number]) : "user")),
+    .transform((v) =>
+      v && USER_ROLES.includes(v as never) ? (v as (typeof USER_ROLES)[number]) : "user",
+    ),
 });
 
 const bodySchema = z.object({
@@ -22,13 +24,19 @@ const bodySchema = z.object({
 
 export type ImportResult = {
   email: string;
-  status: "invited" | "failed";
+  status: "created" | "failed";
+  name?: string;
+  temp_password?: string;
   message?: string;
 };
 
 /**
- * Bulk invite. Every row is attempted independently and reported back, so one
+ * Bulk create. Every row is attempted independently and reported back, so one
  * bad address never aborts the batch — the admin fixes those rows and re-runs.
+ *
+ * Each account gets its own generated temporary password, returned once so the
+ * admin can distribute them. Nothing is emailed, so this is not subject to any
+ * mail rate limit and a full company import runs in one pass.
  */
 export async function POST(request: NextRequest) {
   try {
@@ -60,7 +68,7 @@ export async function POST(request: NextRequest) {
         seen.add(parsed.email);
 
         const departmentId = await resolveDepartment(parsed.department);
-        await inviteUser(
+        const created = await createUserWithTempPassword(
           {
             email: parsed.email,
             full_name: parsed.name,
@@ -70,7 +78,12 @@ export async function POST(request: NextRequest) {
           ctx.userId,
         );
 
-        results.push({ email: parsed.email, status: "invited" });
+        results.push({
+          email: created.email,
+          status: "created",
+          name: created.full_name,
+          temp_password: created.temp_password,
+        });
       } catch (error) {
         const message =
           error instanceof ApiError
@@ -79,22 +92,11 @@ export async function POST(request: NextRequest) {
               ? error.issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")
               : "Unexpected error.";
         results.push({ email: email || "(no email)", status: "failed", message });
-
-        // The mail rate limit will reject everything after it; stop early and
-        // tell the admin rather than producing 90 identical failures.
-        if (error instanceof ApiError && error.status === 429) {
-          results.push({
-            email: "—",
-            status: "failed",
-            message: "Stopped early: remaining rows were not attempted.",
-          });
-          break;
-        }
       }
     }
 
-    const invited = results.filter((r) => r.status === "invited").length;
-    return NextResponse.json({ invited, failed: results.length - invited, results });
+    const created = results.filter((r) => r.status === "created").length;
+    return NextResponse.json({ created, failed: results.length - created, results });
   } catch (error) {
     return apiError(error);
   }
