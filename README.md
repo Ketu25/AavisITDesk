@@ -117,6 +117,80 @@ npm run bootstrap:admin -- someone@aavispharma.com "Their Name"
 
 ---
 
+## Deploying to Cloudflare Workers
+
+The app runs on Cloudflare via [OpenNext](https://opennext.js.org/cloudflare).
+`wrangler.jsonc` and `open-next.config.ts` are committed, so the build does not
+have to guess anything.
+
+```bash
+npm run preview   # build and run the Worker locally
+npm run deploy    # build and deploy
+```
+
+Wrangler needs **Node 22+** locally. Cloudflare's build image already uses 24.
+
+### Worker name
+
+`wrangler.jsonc` sets `name` **and** the `WORKER_SELF_REFERENCE` service
+binding to the same value. They must match — a self-reference binding pointing
+at a name that is not the Worker's own fails the deploy with:
+
+```
+Service binding 'WORKER_SELF_REFERENCE' references Worker '...' which was not
+found. [code: 10143]
+```
+
+If you rename the Worker in the Cloudflare dashboard, change **both** values here.
+
+### Build variables (not just secrets)
+
+`NEXT_PUBLIC_*` values are **inlined into the client bundle by `next build`**.
+If they are absent at build time the browser gets `undefined` and every
+sign-in, activation and realtime update fails — even though the deploy
+succeeds and the pages render.
+
+Set these under **Workers &amp; Pages → your Worker → Settings → Build →
+Variables and Secrets**, so they exist when `next build` runs:
+
+| Variable | Value |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://alslqimadvhrriwdkgrm.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the publishable key |
+| `NEXT_PUBLIC_SITE_URL` | the production URL, e.g. `https://itdesk.aavispharma.com` |
+
+### Runtime secret
+
+`SUPABASE_SERVICE_ROLE_KEY` is only read server-side, so it belongs on the
+Worker rather than the build:
+
+```bash
+npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+```
+
+Without it the app still runs, but user provisioning is disabled and the People
+page says so.
+
+### Three things to change once the domain is live
+
+1. **Supabase → Authentication → URL Configuration** — set Site URL to the
+   production host and add `https://<host>/**` to Redirect URLs, or password
+   reset and invite links will bounce.
+2. **Admin → Settings → Application base URL** — this is what Teams
+   notifications deep-link to. It still points at `http://localhost:3000`.
+3. **`NEXT_PUBLIC_SITE_URL`** above — the `/activate` link handed to new
+   starters is built from it.
+
+### Known caveat
+
+The proxy (`src/proxy.ts`) uses `@supabase/ssr` for session refresh, which needs
+the Node.js runtime. OpenNext reports *"Node.js middleware support is
+experimental in cloudflare"* during the build. It works, but it is the part of
+this deployment most likely to break on an adapter upgrade — worth checking
+first if sessions start behaving oddly after one.
+
+---
+
 ## Roles
 
 Roles are additive and stored as one field on the user record.

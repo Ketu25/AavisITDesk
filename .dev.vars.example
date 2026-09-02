@@ -1,0 +1,8 @@
+# Local Cloudflare Workers runtime secrets (used by `npm run preview`).
+# Copy to .dev.vars — which is gitignored — and fill in.
+#
+# In production these are set on the Worker instead; see README.
+NEXT_PUBLIC_SUPABASE_URL=https://alslqimadvhrriwdkgrm.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<publishable-key>
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
+NEXT_PUBLIC_SITE_URL=http://localhost:8787

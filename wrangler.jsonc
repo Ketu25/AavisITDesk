@@ -1,0 +1,43 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+
+  // Must match the Worker name in the Cloudflare dashboard, and must match the
+  // WORKER_SELF_REFERENCE service below. The failed deploy came from exactly
+  // this mismatch: the wizard named the Worker "aavisitdesk" from the
+  // dashboard project but pointed the self-reference at "aavis-itdesk", the
+  // package.json name.
+  "name": "aavisitdesk",
+
+  "compatibility_date": "2026-08-31",
+
+  // nodejs_compat is required: the Supabase SDK and src/lib/provisioning.ts
+  // (node:crypto, for temporary-password generation) both need Node builtins.
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+
+  "services": [
+    {
+      // Self-reference. The service name must equal "name" above.
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "aavisitdesk"
+    }
+  ],
+
+  "images": {
+    "binding": "IMAGES"
+  },
+
+  "observability": {
+    "enabled": true
+  }
+
+  // No R2 incremental cache binding on purpose. Every route in this app is
+  // server-rendered on demand (the root layout reads the theme cookie, and
+  // every page is behind auth), so there is no ISR or static output to cache.
+  // Adding the binding would force an R2 bucket to exist for no benefit.
+}
