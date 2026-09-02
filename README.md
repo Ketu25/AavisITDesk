@@ -130,6 +130,29 @@ npm run deploy    # build and deploy
 
 Wrangler needs **Node 22+** locally. Cloudflare's build image already uses 24.
 
+### Cloudflare Workers Builds settings
+
+In the dashboard, under **your Worker → Settings → Build**:
+
+| Setting | Value |
+|---|---|
+| Build command | `npm run build:cf` |
+| Deploy command | `npx wrangler deploy` |
+
+The build command **must** be `build:cf`, not `build`. `npm run build` is plain
+`next build`, which produces `.next/` — the deploy step needs the OpenNext
+bundle in `.open-next/`, in particular the compiled config at
+`.open-next/.build/open-next.config.mjs`. With the wrong build command the
+deploy fails with:
+
+```
+ERROR Could not find compiled Open Next config, did you run the build command?
+```
+
+`opennextjs-cloudflare build` runs `next build` itself, so Next is only built
+once. (Setting the deploy command to `npm run deploy` also works, but then Next
+is built twice per deploy for no benefit.)
+
 ### Worker name
 
 `wrangler.jsonc` sets `name` **and** the `WORKER_SELF_REFERENCE` service
