@@ -166,26 +166,33 @@ found. [code: 10143]
 
 If you rename the Worker in the Cloudflare dashboard, change **both** values here.
 
-### Build variables (not just secrets)
+### Public configuration lives in `.env.production`
 
-`NEXT_PUBLIC_*` values are **inlined into the client bundle by `next build`**.
-If they are absent at build time the browser gets `undefined` and every
-sign-in, activation and realtime update fails — even though the deploy
-succeeds and the pages render.
+`NEXT_PUBLIC_*` values are **inlined into the bundle by `next build`**, so they
+have to exist when the build runs. A Cloudflare Worker *runtime* variable is
+applied far too late and is simply ignored — and because the proxy builds a
+Supabase client on every request, a missing value takes down every route,
+including `/login`, as an unexplained 500.
 
-Set these under **Workers &amp; Pages → your Worker → Settings → Build →
-Variables and Secrets**, so they exist when `next build` runs:
+They are therefore committed in `.env.production` rather than left to dashboard
+settings. All three are public by design: the URL and publishable key ship in
+the browser bundle of every Supabase app, and Row Level Security is the actual
+security boundary.
 
-| Variable | Value |
+| Variable | Where |
 |---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://alslqimadvhrriwdkgrm.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the publishable key |
-| `NEXT_PUBLIC_SITE_URL` | the production URL, e.g. `https://itdesk.aavispharma.com` |
+| `NEXT_PUBLIC_SUPABASE_URL` | `.env.production` (committed) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `.env.production` (committed) |
+| `NEXT_PUBLIC_SITE_URL` | `.env.production` (committed) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Worker **secret** — never committed |
 
-`NEXT_PUBLIC_SITE_URL` has to be a **build** variable even though it is only
-read server-side: Next statically replaces every `NEXT_PUBLIC_*` reference at
-build time, so a runtime Worker variable would be ignored and the compiled
-fallback (`http://localhost:3000`) would be used instead.
+Real environment variables still take precedence over the file, so a dashboard
+build variable can override any of it. The same three are also declared under
+`vars` in `wrangler.jsonc` so a deploy stops silently deleting whatever was set
+in the dashboard.
+
+If one is ever missing, the proxy now returns a **503 naming the variable**
+instead of a blank 500, so the failure is diagnosable from the response body.
 
 ### Runtime secret
 

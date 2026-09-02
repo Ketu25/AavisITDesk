@@ -34,7 +34,28 @@
 
   "observability": {
     "enabled": true
-  }
+  },
+
+  // Declared here so a deploy stops silently deleting whatever was set in the
+  // dashboard. All three are public: the URL and publishable key ship in the
+  // browser bundle regardless, and Row Level Security is the security boundary.
+  //
+  // These are the RUNTIME copies. next build inlines NEXT_PUBLIC_* at compile
+  // time, which is why .env.production carries the same values — that file is
+  // what the build actually reads.
+  //
+  // SUPABASE_SERVICE_ROLE_KEY is deliberately absent: it is a secret, set with
+  // `npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY`. Secrets are not part
+  // of "vars" and are not touched by a deploy.
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://alslqimadvhrriwdkgrm.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_Q_ZKFoBamPOcrrxbhHhRkA_DkaEpg0H",
+    "NEXT_PUBLIC_SITE_URL": "https://aavisitdesk.ketupatel2599.workers.dev"
+  },
+
+  // Explicit so wrangler stops warning that it is enabling them by default.
+  "workers_dev": true,
+  "preview_urls": true
 
   // No R2 incremental cache binding on purpose. Every route in this app is
   // server-rendered on demand (the root layout reads the theme cookie, and
