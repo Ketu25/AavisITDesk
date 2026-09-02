@@ -159,6 +159,11 @@ Variables and Secrets**, so they exist when `next build` runs:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the publishable key |
 | `NEXT_PUBLIC_SITE_URL` | the production URL, e.g. `https://itdesk.aavispharma.com` |
 
+`NEXT_PUBLIC_SITE_URL` has to be a **build** variable even though it is only
+read server-side: Next statically replaces every `NEXT_PUBLIC_*` reference at
+build time, so a runtime Worker variable would be ignored and the compiled
+fallback (`http://localhost:3000`) would be used instead.
+
 ### Runtime secret
 
 `SUPABASE_SERVICE_ROLE_KEY` is only read server-side, so it belongs on the
@@ -178,8 +183,11 @@ page says so.
    reset and invite links will bounce.
 2. **Admin → Settings → Application base URL** — this is what Teams
    notifications deep-link to. It still points at `http://localhost:3000`.
-3. **`NEXT_PUBLIC_SITE_URL`** above — the `/activate` link handed to new
-   starters is built from it.
+3. **`NEXT_PUBLIC_SITE_URL`** above — the `redirectTo` on emailed invite and
+   password-reset links is built from it, so it must exactly match an entry in
+   Supabase's Redirect URLs. The `/activate` link shown in the credentials
+   panel does *not* use it: that is derived from the admin's own browser
+   origin, so it is always correct without configuration.
 
 ### Known caveat
 
