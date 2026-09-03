@@ -7,46 +7,61 @@
    resolves through these so a theme switch never leaves a stale value behind.
    =========================================================================== */
 :root {
-  --canvas:        #f6f6f9;
+  /* Cool paper, not warm cream — this is a lab instrument, not stationery. */
+  --canvas:        #f4f6f8;
   --canvas-raised: #ffffff;
   --surface:       #ffffff;
-  --surface-hover: #f1f1f6;
-  --surface-sunk:  #eeeef4;
-  --line:          rgb(14 14 34 / 0.09);
-  --line-strong:   rgb(14 14 34 / 0.17);
-  --ink:           #14141c;
-  --ink-muted:     #5b5b70;
-  --ink-faint:     #8a8a9e;
-  --accent:        #5b3df0;
+  --surface-hover: #edf1f5;
+  --surface-sunk:  #e9eef3;
+  --line:          rgb(14 30 45 / 0.10);
+  --line-strong:   rgb(14 30 45 / 0.18);
+  --ink:           #0e1720;
+  --ink-muted:     #55677a;
+  --ink-faint:     #8093a5;
+  --accent:        #2a4fd7;
   --accent-ink:    #ffffff;
-  --accent-soft:   rgb(91 61 240 / 0.10);
-  --accent-line:   rgb(91 61 240 / 0.28);
-  --shadow-sm:     0 1px 2px rgb(14 14 34 / 0.05);
-  --shadow-md:     0 4px 16px -4px rgb(14 14 34 / 0.10);
-  --shadow-lg:     0 24px 60px -18px rgb(14 14 34 / 0.22);
-  --glow:          0 0 0 1px rgb(91 61 240 / 0.16), 0 8px 32px -10px rgb(91 61 240 / 0.35);
+  --accent-soft:   rgb(42 79 215 / 0.09);
+  --accent-line:   rgb(42 79 215 / 0.26);
+
+  /* Measurement colours. Full chroma is reserved for these: the SLA reading is
+     the loudest thing on any screen, because it is the thing that decides what
+     gets worked on next. */
+  --spec-ok:   #17936a;
+  --spec-warn: #b4741a;
+  --spec-fail: #d33f3c;
+
+  --shadow-sm:     0 1px 2px rgb(14 30 45 / 0.06);
+  --shadow-md:     0 4px 16px -4px rgb(14 30 45 / 0.12);
+  --shadow-lg:     0 24px 60px -18px rgb(14 30 45 / 0.24);
+  --glow:          0 0 0 1px rgb(42 79 215 / 0.18), 0 8px 32px -10px rgb(42 79 215 / 0.34);
   color-scheme: light;
 }
 
 .dark {
-  --canvas:        #08080c;
-  --canvas-raised: #0d0d14;
-  --surface:       rgb(255 255 255 / 0.026);
-  --surface-hover: rgb(255 255 255 / 0.052);
-  --surface-sunk:  rgb(0 0 0 / 0.28);
-  --line:          rgb(255 255 255 / 0.075);
-  --line-strong:   rgb(255 255 255 / 0.145);
-  --ink:           #eeeef5;
-  --ink-muted:     #8d8da6;
-  --ink-faint:     #5e5e78;
-  --accent:        #8062ff;
-  --accent-ink:    #0b0713;
-  --accent-soft:   rgb(128 98 255 / 0.15);
-  --accent-line:   rgb(128 98 255 / 0.35);
-  --shadow-sm:     0 1px 2px rgb(0 0 0 / 0.4);
-  --shadow-md:     0 8px 24px -8px rgb(0 0 0 / 0.6);
+  /* Graphite with a blue cast — instrument housing, not a void. */
+  --canvas:        #0a0e12;
+  --canvas-raised: #10161d;
+  --surface:       rgb(255 255 255 / 0.028);
+  --surface-hover: rgb(255 255 255 / 0.055);
+  --surface-sunk:  rgb(0 0 0 / 0.24);
+  --line:          rgb(154 186 208 / 0.11);
+  --line-strong:   rgb(154 186 208 / 0.21);
+  --ink:           #e7eef4;
+  --ink-muted:     #8fa0ae;
+  --ink-faint:     #5e6e7c;
+  --accent:        #5b7cfa;
+  --accent-ink:    #060a12;
+  --accent-soft:   rgb(91 124 250 / 0.15);
+  --accent-line:   rgb(91 124 250 / 0.34);
+
+  --spec-ok:   #35c08a;
+  --spec-warn: #e0a33a;
+  --spec-fail: #f25f5c;
+
+  --shadow-sm:     0 1px 2px rgb(0 0 0 / 0.44);
+  --shadow-md:     0 8px 24px -8px rgb(0 0 0 / 0.62);
   --shadow-lg:     0 30px 70px -20px rgb(0 0 0 / 0.8);
-  --glow:          0 0 0 1px rgb(128 98 255 / 0.28), 0 10px 40px -12px rgb(128 98 255 / 0.45);
+  --glow:          0 0 0 1px rgb(91 124 250 / 0.3), 0 10px 40px -12px rgb(91 124 250 / 0.45);
   color-scheme: dark;
 }
 
@@ -65,9 +80,12 @@
   --color-accent-ink:    var(--accent-ink);
   --color-accent-soft:   var(--accent-soft);
   --color-accent-line:   var(--accent-line);
+  --color-spec-ok:       var(--spec-ok);
+  --color-spec-warn:     var(--spec-warn);
+  --color-spec-fail:     var(--spec-fail);
 
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-mono: var(--font-mono-face), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, "SF Mono", Menlo, monospace;
 
   --radius-card: 14px;
 }
@@ -166,6 +184,18 @@
     font-weight: 550;
     letter-spacing: 0.01em;
     white-space: nowrap;
+    transition:
+      background-color 160ms var(--ease-standard, ease),
+      border-color 160ms var(--ease-standard, ease),
+      color 160ms var(--ease-standard, ease);
+  }
+
+  /* Keeps the dot as the only coloured element, so the label reads as a label
+     rather than as another alarm. */
+  .badge[data-emphasis="quiet"] {
+    background: transparent;
+    border-color: var(--line);
+    color: var(--ink-muted);
   }
 
   .tone-dot {
@@ -183,6 +213,38 @@
       linear-gradient(to bottom, var(--line) 1px, transparent 1px);
     background-size: 56px 56px;
     mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 20%, transparent 75%);
+  }
+}
+
+@layer components {
+  /* Micro-labels are set in mono and letterspaced: on an instrument the legend
+     is engraved, not written. Used for every section eyebrow and column head. */
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.625rem;
+    font-weight: 500;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  /* Every reading — counts, durations, ticket numbers, timestamps — is mono and
+     tabular so digits line up column to column and never reflow while ticking. */
+  .readout {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "zero" 1;
+    letter-spacing: -0.01em;
+  }
+
+  /* Hairline tick marks along a measurement track. */
+  .tick-track {
+    background-image: repeating-linear-gradient(
+      to right,
+      var(--line-strong) 0 1px,
+      transparent 1px 100%
+    );
+    background-size: 12.5% 100%;
   }
 }
 

@@ -4,6 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageBody, PageHeader } from "@/components/shell/page-header";
 import { Stat } from "@/components/ui/stat";
+import { Reveal } from "@/components/motion";
 import { EmptyState } from "@/components/ui/states";
 import { Icons } from "@/components/shell/icons";
 import { DashboardList } from "@/components/tickets/dashboard-list";
@@ -128,10 +129,8 @@ export default async function DashboardPage() {
 
       <PageBody className="space-y-6">
         {agentStats && (
-          <section className="space-y-3">
-            <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-faint">
-              Service desk
-            </h2>
+          <Reveal index={0} className="space-y-3" role="region">
+            <h2 className="eyebrow">Service desk</h2>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Stat label="Open" value={agentStats.open} href="/queue" hint="Across all departments" />
               <Stat
@@ -159,15 +158,13 @@ export default async function DashboardPage() {
                 }
               />
             </div>
-          </section>
+          </Reveal>
         )}
 
         {isAgent && attention.length > 0 && (
-          <section className="space-y-3">
+          <Reveal index={1} className="space-y-3" role="region">
             <div className="flex items-baseline justify-between">
-              <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-faint">
-                Needs attention first
-              </h2>
+              <h2 className="eyebrow">Needs attention first</h2>
               <Link
                 href="/queue"
                 className="text-[0.75rem] text-ink-muted underline-offset-4 hover:text-ink hover:underline"
@@ -176,14 +173,12 @@ export default async function DashboardPage() {
               </Link>
             </div>
             <DashboardList tickets={attention} rules={rules ?? []} showRequester showAssignee />
-          </section>
+          </Reveal>
         )}
 
-        <section className="space-y-3">
+        <Reveal index={2} className="space-y-3" role="region">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-faint">
-              My tickets
-            </h2>
+            <h2 className="eyebrow">My tickets</h2>
             <Link
               href="/tickets"
               className="text-[0.75rem] text-ink-muted underline-offset-4 hover:text-ink hover:underline"
@@ -225,7 +220,7 @@ export default async function DashboardPage() {
           ) : (
             <DashboardList tickets={mine} rules={rules ?? []} showAssignee />
           )}
-        </section>
+        </Reveal>
       </PageBody>
     </>
   );

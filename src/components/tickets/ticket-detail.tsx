@@ -11,7 +11,8 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
 import { Icons } from "@/components/shell/icons";
-import { PriorityPill, SlaMeter, StatusPill } from "./pills";
+import { PriorityPill, StatusPill } from "./pills";
+import { SlaDial } from "./sla-instrument";
 import {
   TicketTimeline,
   type CommentWithAuthor,
@@ -202,9 +203,7 @@ export function TicketDetail({
             )}
 
             <div>
-              <h2 className="mb-3 text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-faint">
-                Activity
-              </h2>
+              <h2 className="eyebrow mb-3">Activity</h2>
               <TicketTimeline
                 comments={comments}
                 events={events}
@@ -292,7 +291,7 @@ export function TicketDetail({
           {/* ---------------------------------------------------- sidebar */}
           <aside className="space-y-4 lg:sticky lg:top-20 lg:self-start">
             <div className="card space-y-3.5 p-4">
-              <SlaMeter ticket={ticket} rules={ruleIndex} />
+              <SlaDial ticket={ticket} rules={ruleIndex} className="pt-1" />
 
               <dl className="space-y-3 border-t border-line pt-3.5 text-[0.8125rem]">
                 <Row label="Requester">
@@ -341,9 +340,7 @@ export function TicketDetail({
 
             {viewer.isAgent && (
               <div className="card space-y-4 p-4">
-                <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-faint">
-                  Agent controls
-                </p>
+                <p className="eyebrow">Agent controls</p>
 
                 {nextStatuses.length > 0 && (
                   <div className="space-y-1.5">

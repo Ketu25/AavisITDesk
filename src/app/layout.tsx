@@ -1,19 +1,27 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast";
 import { THEME_COOKIE } from "@/lib/theme";
 import "./globals.css";
 
-const inter = Inter({
+/**
+ * Plex Mono does the talking. Every number, code and label is set in it, which
+ * makes the interface read like an instrument panel rather than a web form —
+ * apt for a plant where everything already carries a batch code and a
+ * timestamp. Plex Sans handles prose so the mono stays a deliberate signal.
+ */
+const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
-  variable: "--font-inter",
+  weight: ["400", "500", "600"],
+  variable: "--font-plex-sans",
   display: "swap",
 });
 
-const mono = JetBrains_Mono({
+const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
-  variable: "--font-mono-face",
+  weight: ["400", "500", "600"],
+  variable: "--font-plex-mono",
   display: "swap",
 });
 
@@ -24,8 +32,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f6f9" },
-    { media: "(prefers-color-scheme: dark)", color: "#08080c" },
+    { media: "(prefers-color-scheme: light)", color: "#f4f6f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0e12" },
   ],
 };
 
@@ -40,7 +48,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
 
   return (
     <html lang="en" className={theme === "light" ? undefined : "dark"} suppressHydrationWarning>
-      <body className={`${inter.variable} ${mono.variable} antialiased`}>
+      <body className={`${plexSans.variable} ${plexMono.variable} antialiased`}>
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

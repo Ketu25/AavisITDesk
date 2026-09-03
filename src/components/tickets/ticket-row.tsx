@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { motion } from "motion/react";
 import { PriorityPill, SlaPill, StatusPill } from "./pills";
+import { SlaTrack } from "./sla-instrument";
 import { Avatar } from "@/components/ui/avatar";
 import { relativeTime } from "@/lib/format";
+import { spring, stagger } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { SlaRule, Ticket, TicketPriority } from "@/lib/database.types";
 
@@ -33,23 +35,23 @@ export function TicketRow({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.98 }}
-      transition={{
-        type: "spring",
-        stiffness: 420,
-        damping: 34,
-        delay: Math.min(index * 0.022, 0.22),
-      }}
+      transition={{ ...spring.arrive, delay: stagger(index) }}
     >
       <Link
         href={`/tickets/${ticket.id}`}
         className={cn(
-          "group flex flex-col gap-2.5 border-b border-line px-4 py-3.5 last:border-b-0",
+          "group relative flex flex-col gap-2.5 border-b border-line px-4 py-3.5 last:border-b-0",
           "transition-colors duration-150 hover:bg-surface-hover sm:flex-row sm:items-center sm:gap-4",
         )}
       >
+        <SlaTrack
+          ticket={ticket}
+          rules={rules}
+          className="absolute inset-x-0 bottom-0 h-[2px] rounded-none opacity-60 transition-opacity group-hover:opacity-100"
+        />
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <span className="tabular font-mono text-[0.6875rem] text-ink-faint">
+            <span className="readout text-[0.6875rem] text-ink-muted">
               {ticket.ticket_number}
             </span>
             <span className="text-[0.6875rem] text-ink-faint">·</span>

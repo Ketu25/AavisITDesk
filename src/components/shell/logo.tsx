@@ -12,8 +12,8 @@ export function Logo({ className, size = 28 }: { className?: string; size?: numb
     >
       <defs>
         <linearGradient id="aavis-mark" x1="4" y1="3" x2="28" y2="29" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#8B6BFF" />
-          <stop offset="1" stopColor="#4C2FD6" />
+          <stop stopColor="#7C97FF" />
+          <stop offset="1" stopColor="#2A4FD7" />
         </linearGradient>
       </defs>
       <rect x="1.25" y="1.25" width="29.5" height="29.5" rx="8.75" fill="url(#aavis-mark)" />

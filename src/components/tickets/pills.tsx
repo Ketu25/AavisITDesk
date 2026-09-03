@@ -10,12 +10,14 @@ import type { SlaRule, Ticket, TicketPriority, TicketStatus } from "@/lib/databa
 
 export function StatusPill({ status }: { status: TicketStatus }) {
   const meta = STATUS_META[status];
-  return <Badge tone={meta.tone}>{meta.label}</Badge>;
+  // Categorical: no hue, just the label and a dot for shape.
+  return <Badge tone={meta.tone} emphasis="quiet">{meta.label}</Badge>;
 }
 
 export function PriorityPill({ priority }: { priority: TicketPriority }) {
   const meta = PRIORITY_META[priority];
-  return <Badge tone={meta.tone}>{meta.label}</Badge>;
+  // Ordered, so the dot keeps its rank colour while the chip stays quiet.
+  return <Badge tone={meta.tone} emphasis="quiet">{meta.label}</Badge>;
 }
 
 type SlaTicket = Pick<
@@ -28,15 +30,20 @@ type SlaTicket = Pick<
  * appears without a page reload and the ticket's own props stay the source of
  * truth for everything else.
  */
-export function useSla(ticket: SlaTicket, rules?: Partial<Record<TicketPriority, SlaRule>>) {
+export function useSla(
+  ticket: SlaTicket,
+  rules?: Partial<Record<TicketPriority, SlaRule>>,
+  /** Lists tick slowly; a dial the user is actually looking at ticks every second. */
+  intervalMs = 30_000,
+) {
   // Seeded once via a lazy initialiser, then advanced only by the interval
   // below — every render after the first reads it from state, not the clock.
   const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 30_000);
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
     return () => clearInterval(id);
-  }, []);
+  }, [intervalMs]);
 
   return useMemo(() => computeSla(ticket, rules, now), [ticket, rules, now]);
 }
@@ -64,7 +71,7 @@ export function SlaPill({
 
   return (
     <Badge tone={meta.tone}>
-      <span className="tabular">
+      <span className="readout">
         {meta.label}
         {suffix}
       </span>
