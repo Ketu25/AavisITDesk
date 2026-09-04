@@ -33,11 +33,14 @@
   /* Backdrop. Tuned per theme rather than borrowed from --line, because a
      hairline that reads correctly between two cards is far too faint to
      register as a plotting grid across a whole viewport. */
-  --grid-fine:  rgb(14 30 45 / 0.045);
-  --grid-major: rgb(14 30 45 / 0.10);
-  --lamp:       rgb(42 79 215 / 0.10);
-  --lamp-cool:  rgb(20 120 160 / 0.06);
-  --vignette:   rgb(14 30 45 / 0.05);
+  /* Backdrop blooms. Positions follow the reference; the hues are ours —
+     cobalt from the accent, teal from the in-spec colour, a cool cyan
+     between them — so the ground belongs to this product rather than being a
+     stock gradient dropped behind it. */
+  --mesh-indigo: rgb(42 79 215 / 0.19);
+  --mesh-teal:   rgb(23 147 106 / 0.11);
+  --mesh-cyan:   rgb(20 120 160 / 0.10);
+  --vignette:    rgb(14 30 45 / 0.05);
 
   --shadow-sm:     0 1px 2px rgb(14 30 45 / 0.06);
   --shadow-md:     0 4px 16px -4px rgb(14 30 45 / 0.12);
@@ -67,11 +70,10 @@
   --spec-warn: #e0a33a;
   --spec-fail: #f25f5c;
 
-  --grid-fine:  rgb(154 186 208 / 0.05);
-  --grid-major: rgb(154 186 208 / 0.14);
-  --lamp:       rgb(91 124 250 / 0.17);
-  --lamp-cool:  rgb(120 190 220 / 0.09);
-  --vignette:   rgb(3 6 11 / 0.55);
+  --mesh-indigo: rgb(91 124 250 / 0.24);
+  --mesh-teal:   rgb(53 192 138 / 0.115);
+  --mesh-cyan:   rgb(120 190 220 / 0.105);
+  --vignette:    rgb(3 6 11 / 0.55);
 
   --shadow-sm:     0 1px 2px rgb(0 0 0 / 0.44);
   --shadow-md:     0 8px 24px -8px rgb(0 0 0 / 0.62);
@@ -230,32 +232,23 @@
   /* SLA instrument, which is the one thing here allowed to shout.         */
   /* ===================================================================== */
 
-  /* 1. The substrate: a plotting grid, fine with a heavier major division
-        every fifth line — the paper a chromatogram is drawn on. */
-  .backdrop-grid {
-    background-image:
-      linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px),
-      linear-gradient(to right, var(--grid-fine) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--grid-fine) 1px, transparent 1px);
-    background-size:
-      160px 160px,
-      160px 160px,
-      32px 32px,
-      32px 32px;
-    opacity: 1;
-    /* Fades away from the top-left so it reads as a lit surface rather than
-       as wallpaper tiled edge to edge. */
-    mask-image: radial-gradient(115% 90% at 18% 0%, #000 0%, rgb(0 0 0 / 0.35) 45%, transparent 82%);
+  /* 1 & 2. Two bloom fields that drift against each other at different
+        speeds. The offset is what stops it reading as a static gradient
+        image: the colour fields separate and recombine slowly, the way a
+        mesh gradient does, without a render loop or a canvas. */
+  .backdrop-mesh {
+    background:
+      radial-gradient(58% 50% at 34% 4%, var(--mesh-indigo), transparent 70%),
+      radial-gradient(50% 46% at 97% 30%, var(--mesh-cyan), transparent 72%);
+    animation: mesh-drift-a 42s ease-in-out infinite;
+    will-change: transform;
   }
 
-  /* 2. The lamp. Anchored above the viewport so only the falloff is visible. */
-  .backdrop-glow {
+  .backdrop-mesh-alt {
     background:
-      radial-gradient(70% 55% at 18% -12%, var(--lamp), transparent 68%),
-      radial-gradient(50% 40% at 92% 2%, var(--lamp-cool), transparent 70%),
-      radial-gradient(90% 55% at 50% 110%, var(--vignette), transparent 72%);
-    animation: panel-drift 34s ease-in-out infinite;
+      radial-gradient(58% 50% at 66% 78%, var(--mesh-teal), transparent 72%),
+      radial-gradient(84% 54% at 46% 112%, var(--vignette), transparent 74%);
+    animation: mesh-drift-b 56s ease-in-out infinite;
     will-change: transform;
   }
 
@@ -280,22 +273,34 @@
     transition: opacity 1.2s var(--ease-standard, ease-out);
   }
 
-  @keyframes panel-drift {
+  @keyframes mesh-drift-a {
     0%,
     100% {
       transform: translate3d(0, 0, 0) scale(1);
     }
     50% {
-      transform: translate3d(-2.5%, 1.5%, 0) scale(1.07);
+      transform: translate3d(-3%, 2%, 0) scale(1.09);
     }
   }
 
-  /* Signed-out screens are a single centred card, so the lamp sits above it
-     rather than off in a corner lighting chrome that is not there. */
-  .backdrop-glow--centred {
-    background:
-      radial-gradient(52% 44% at 50% -6%, var(--lamp), transparent 68%),
-      radial-gradient(70% 50% at 50% 112%, var(--vignette), transparent 72%);
+  @keyframes mesh-drift-b {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1.04);
+    }
+    50% {
+      transform: translate3d(3.5%, -2.5%, 0) scale(1);
+    }
+  }
+
+  /* Signed-out screens keep the centred grid they had before — a single card
+     on an empty viewport reads differently from a working shell. */
+  .grid-backdrop {
+    background-image:
+      linear-gradient(to right, var(--line) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 20%, transparent 75%);
   }
 }
 

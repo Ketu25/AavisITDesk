@@ -2,7 +2,6 @@
 
 import { motion } from "motion/react";
 import { Wordmark } from "./logo";
-import { AppBackdrop } from "./app-backdrop";
 
 /** Shared chrome for every signed-out screen. */
 export function AuthShell({
@@ -18,9 +17,14 @@ export function AuthShell({
 }) {
   return (
     <main className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10">
-      {/* Same backdrop system as the signed-in app, so the two do not read as
-          different products. */}
-      <AppBackdrop variant="auth" />
+      <div className="grid-backdrop pointer-events-none absolute inset-0" aria-hidden />
+      <motion.div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-[-14rem] size-[34rem] -translate-x-1/2 rounded-full blur-[110px]"
+        style={{ background: "radial-gradient(circle, var(--accent-soft), transparent 68%)" }}
+        animate={{ scale: [1, 1.12, 1], opacity: [0.75, 1, 0.75] }}
+        transition={{ duration: 11, repeat: Infinity, ease: "easeInOut" }}
+      />
 
       <motion.div
         initial={{ opacity: 0, y: 14 }}
