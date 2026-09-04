@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cf": "opennextjs-cloudflare build",
+    "build:cf": "rm -rf .next .open-next && NEXT_PUBLIC_BUILD_COMMIT=${WORKERS_CI_COMMIT_SHA:-${CF_PAGES_COMMIT_SHA:-local}} opennextjs-cloudflare build",
     "start": "next start",
     "lint": "eslint",
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs",

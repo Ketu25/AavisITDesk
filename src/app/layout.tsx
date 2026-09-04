@@ -43,11 +43,22 @@ export const viewport: Viewport = {
  * the wrong theme and the inline bootstrap script a client-side read needs —
  * a <script> inside the React tree logs a warning on every render.
  */
+/**
+ * Stamped at build time from the CI commit SHA. Cloudflare's "Retry
+ * deployment" rebuilds the *original* commit rather than the branch head, so a
+ * deploy can succeed while shipping older code. This makes what is actually
+ * live checkable with a single curl instead of guessing from asset hashes.
+ */
+const BUILD_COMMIT = process.env.NEXT_PUBLIC_BUILD_COMMIT ?? "local";
+
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const theme = (await cookies()).get(THEME_COOKIE)?.value;
 
   return (
     <html lang="en" className={theme === "light" ? undefined : "dark"} suppressHydrationWarning>
+      <head>
+        <meta name="x-build-commit" content={BUILD_COMMIT} />
+      </head>
       <body className={`${plexSans.variable} ${plexMono.variable} antialiased`}>
         <ToastProvider>{children}</ToastProvider>
       </body>
