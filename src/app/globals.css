@@ -30,6 +30,15 @@
   --spec-warn: #b4741a;
   --spec-fail: #d33f3c;
 
+  /* Backdrop. Tuned per theme rather than borrowed from --line, because a
+     hairline that reads correctly between two cards is far too faint to
+     register as a plotting grid across a whole viewport. */
+  --grid-fine:  rgb(14 30 45 / 0.045);
+  --grid-major: rgb(14 30 45 / 0.10);
+  --lamp:       rgb(42 79 215 / 0.10);
+  --lamp-cool:  rgb(20 120 160 / 0.06);
+  --vignette:   rgb(14 30 45 / 0.05);
+
   --shadow-sm:     0 1px 2px rgb(14 30 45 / 0.06);
   --shadow-md:     0 4px 16px -4px rgb(14 30 45 / 0.12);
   --shadow-lg:     0 24px 60px -18px rgb(14 30 45 / 0.24);
@@ -57,6 +66,12 @@
   --spec-ok:   #35c08a;
   --spec-warn: #e0a33a;
   --spec-fail: #f25f5c;
+
+  --grid-fine:  rgb(154 186 208 / 0.05);
+  --grid-major: rgb(154 186 208 / 0.14);
+  --lamp:       rgb(91 124 250 / 0.17);
+  --lamp-cool:  rgb(120 190 220 / 0.09);
+  --vignette:   rgb(3 6 11 / 0.55);
 
   --shadow-sm:     0 1px 2px rgb(0 0 0 / 0.44);
   --shadow-md:     0 8px 24px -8px rgb(0 0 0 / 0.62);
@@ -206,13 +221,81 @@
     flex: none;
   }
 
-  /* Grid backdrop for the auth screen. */
-  .grid-backdrop {
+  /* ===================================================================== */
+  /* Backdrop                                                              */
+  /*                                                                       */
+  /* Four cheap layers, no JavaScript and nothing that repaints on a timer */
+  /* except one very slow drift. A page someone leaves open all day cannot */
+  /* afford a render loop, and a busy background would compete with the    */
+  /* SLA instrument, which is the one thing here allowed to shout.         */
+  /* ===================================================================== */
+
+  /* 1. The substrate: a plotting grid, fine with a heavier major division
+        every fifth line — the paper a chromatogram is drawn on. */
+  .backdrop-grid {
     background-image:
-      linear-gradient(to right, var(--line) 1px, transparent 1px),
-      linear-gradient(to bottom, var(--line) 1px, transparent 1px);
-    background-size: 56px 56px;
-    mask-image: radial-gradient(ellipse 80% 60% at 50% 40%, #000 20%, transparent 75%);
+      linear-gradient(to right, var(--grid-major) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-major) 1px, transparent 1px),
+      linear-gradient(to right, var(--grid-fine) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--grid-fine) 1px, transparent 1px);
+    background-size:
+      160px 160px,
+      160px 160px,
+      32px 32px,
+      32px 32px;
+    opacity: 1;
+    /* Fades away from the top-left so it reads as a lit surface rather than
+       as wallpaper tiled edge to edge. */
+    mask-image: radial-gradient(115% 90% at 18% 0%, #000 0%, rgb(0 0 0 / 0.35) 45%, transparent 82%);
+  }
+
+  /* 2. The lamp. Anchored above the viewport so only the falloff is visible. */
+  .backdrop-glow {
+    background:
+      radial-gradient(70% 55% at 18% -12%, var(--lamp), transparent 68%),
+      radial-gradient(50% 40% at 92% 2%, var(--lamp-cool), transparent 70%),
+      radial-gradient(90% 55% at 50% 110%, var(--vignette), transparent 72%);
+    animation: panel-drift 34s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  /* 3. Grain. Mostly there to kill the banding a wide dark gradient produces,
+        but it is also what stops the surface feeling like flat paint. */
+  .backdrop-grain {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.035;
+    mix-blend-mode: overlay;
+  }
+  .dark .backdrop-grain {
+    opacity: 0.055;
+    mix-blend-mode: soft-light;
+  }
+
+  /* 4. The room reacts to the desk. --alert rises with the number of breached
+        tickets, warming the far corner. Capped low: this is peripheral
+        awareness, not an alarm, and it must never fight body text. */
+  .backdrop-alert {
+    background: radial-gradient(46% 40% at 96% 88%, var(--spec-fail), transparent 68%);
+    opacity: calc(var(--alert, 0) * 0.1);
+    transition: opacity 1.2s var(--ease-standard, ease-out);
+  }
+
+  @keyframes panel-drift {
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+      transform: translate3d(-2.5%, 1.5%, 0) scale(1.07);
+    }
+  }
+
+  /* Signed-out screens are a single centred card, so the lamp sits above it
+     rather than off in a corner lighting chrome that is not there. */
+  .backdrop-glow--centred {
+    background:
+      radial-gradient(52% 44% at 50% -6%, var(--lamp), transparent 68%),
+      radial-gradient(70% 50% at 50% 112%, var(--vignette), transparent 72%);
   }
 }
 

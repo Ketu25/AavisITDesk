@@ -1,6 +1,7 @@
 import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar, type NavCounts } from "@/components/shell/sidebar";
+import { AppBackdrop } from "@/components/shell/app-backdrop";
 import { RealtimeRefresh } from "@/components/shell/realtime-refresh";
 import { OPEN_STATUSES } from "@/lib/constants";
 
@@ -39,12 +40,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   };
 
   return (
-    <div className="flex min-h-dvh bg-canvas">
+    <div className="flex min-h-dvh">
       <Sidebar
         profile={profile}
         departmentName={departmentResult.data?.name ?? null}
         counts={counts}
       />
+      <AppBackdrop alert={counts.breached} />
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
       <RealtimeRefresh />
     </div>
