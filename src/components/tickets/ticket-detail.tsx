@@ -17,7 +17,7 @@ import {
   TicketTimeline,
   type CommentWithAuthor,
   type EventWithActor,
-} from "./ticket-timeline";
+} from "./timeline";
 import { api, ApiClientError } from "@/lib/api";
 import { AGENT_NEXT_STATUS, PRIORITY_META, STATUS_META } from "@/lib/constants";
 import { indexRules } from "@/lib/sla";
