@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
+import { fadeUp, reducedVariants } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 /** One categorical ramp used by every chart, so series colours never clash. */
@@ -9,6 +10,11 @@ export const SERIES = [
   "#a78bfa", "#22d3ee", "#4ade80", "#fb923c", "#f472b6", "#94a3b8",
 ];
 
+/**
+ * Reveals as it scrolls into view rather than all at once on load. The reports
+ * page is taller than a viewport, so animating everything up front would spend
+ * the motion on charts nobody is looking at yet.
+ */
 export function ChartCard({
   title,
   subtitle,
@@ -20,14 +26,22 @@ export function ChartCard({
   children: React.ReactNode;
   className?: string;
 }) {
+  const reduced = useReducedMotion();
+
   return (
-    <section className={cn("card p-4", className)}>
+    <motion.section
+      variants={reduced ? reducedVariants : fadeUp}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-60px" }}
+      className={cn("card p-4", className)}
+    >
       <div className="mb-4">
         <h3 className="text-[0.8125rem] font-semibold tracking-tight text-ink">{title}</h3>
         {subtitle && <p className="mt-0.5 text-[0.75rem] text-ink-faint">{subtitle}</p>}
       </div>
       {children}
-    </section>
+    </motion.section>
   );
 }
 

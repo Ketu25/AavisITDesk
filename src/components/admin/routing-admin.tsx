@@ -11,6 +11,7 @@ import { Icons } from "@/components/shell/icons";
 import { api, ApiClientError } from "@/lib/api";
 import { PRIORITY_META } from "@/lib/constants";
 import { TICKET_PRIORITIES, type RoutingRule } from "@/lib/database.types";
+import { StaggerChildren } from "@/components/motion";
 
 type Agent = { id: string; full_name: string };
 
@@ -47,7 +48,7 @@ export function RoutingAdmin({
   }
 
   return (
-    <div className="space-y-4">
+    <StaggerChildren className="space-y-4">
       <div className="card p-4">
         <p className="text-[0.8125rem] leading-relaxed text-ink-muted">
           When a ticket is created the matching rule runs first: it can raise the priority and
@@ -235,6 +236,6 @@ export function RoutingAdmin({
           ))}
         </AnimatePresence>
       </div>
-    </div>
+    </StaggerChildren>
   );
 }

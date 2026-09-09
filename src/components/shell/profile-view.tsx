@@ -11,6 +11,7 @@ import { createClient } from "@/lib/supabase/client";
 import { ROLE_META } from "@/lib/constants";
 import { absoluteTime } from "@/lib/format";
 import type { Profile } from "@/lib/database.types";
+import { StaggerChildren } from "@/components/motion";
 
 export function ProfileView({
   profile,
@@ -61,7 +62,7 @@ export function ProfileView({
   }
 
   return (
-    <div className="space-y-4">
+    <StaggerChildren className="space-y-4">
       <div className="card flex items-center gap-4 p-5">
         <Avatar name={profile.full_name} id={profile.id} size="lg" />
         <div className="min-w-0">
@@ -128,6 +129,6 @@ export function ProfileView({
           </form>
         </div>
       </div>
-    </div>
+    </StaggerChildren>
   );
 }

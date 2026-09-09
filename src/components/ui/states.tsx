@@ -1,3 +1,7 @@
+"use client";
+
+import { motion, useReducedMotion } from "motion/react";
+import { spring, transition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 export function EmptyState({
@@ -13,20 +17,48 @@ export function EmptyState({
   action?: React.ReactNode;
   className?: string;
 }) {
+  const reduced = useReducedMotion();
+
   return (
     <div className={cn("flex flex-col items-center px-6 py-14 text-center", className)}>
       {icon && (
-        <div className="mb-3.5 flex size-11 items-center justify-center rounded-xl border border-line bg-surface text-ink-faint">
+        <motion.div
+          initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={spring.gentle}
+          className="mb-3.5 flex size-11 items-center justify-center rounded-xl border border-line bg-surface text-ink-faint"
+        >
           {icon}
-        </div>
+        </motion.div>
       )}
-      <p className="text-sm font-medium text-ink">{title}</p>
+      <motion.p
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...transition.base, delay: 0.05 }}
+        className="text-sm font-medium text-ink"
+      >
+        {title}
+      </motion.p>
       {description && (
-        <p className="mt-1.5 max-w-sm text-[0.8125rem] leading-relaxed text-ink-muted text-pretty">
+        <motion.p
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...transition.base, delay: 0.1 }}
+          className="mt-1.5 max-w-sm text-[0.8125rem] leading-relaxed text-ink-muted text-pretty"
+        >
           {description}
-        </p>
+        </motion.p>
       )}
-      {action && <div className="mt-4">{action}</div>}
+      {action && (
+        <motion.div
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...transition.base, delay: 0.15 }}
+          className="mt-4"
+        >
+          {action}
+        </motion.div>
+      )}
     </div>
   );
 }

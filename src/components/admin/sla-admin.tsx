@@ -10,6 +10,7 @@ import { api, ApiClientError } from "@/lib/api";
 import { PRIORITY_META } from "@/lib/constants";
 import { minutesToLabel } from "@/lib/format";
 import type { SlaRule } from "@/lib/database.types";
+import { Stagger, StaggerItem } from "@/components/motion";
 
 export function SlaAdmin({ rules }: { rules: SlaRule[] }) {
   const router = useRouter();
@@ -59,7 +60,7 @@ export function SlaAdmin({ rules }: { rules: SlaRule[] }) {
   }
 
   return (
-    <div className="space-y-3">
+    <Stagger className="space-y-3">
       {rules.map((rule) => {
         const values = draft[rule.id];
         const dirty =
@@ -67,7 +68,7 @@ export function SlaAdmin({ rules }: { rules: SlaRule[] }) {
           Number(values.threshold) !== rule.at_risk_threshold_pct;
 
         return (
-          <div key={rule.id} className="card p-4">
+          <StaggerItem key={rule.id} className="card p-4">
             <div className="mb-3.5 flex items-center justify-between gap-3">
               <Badge tone={PRIORITY_META[rule.priority].tone}>
                 {PRIORITY_META[rule.priority].label}
@@ -125,7 +126,7 @@ export function SlaAdmin({ rules }: { rules: SlaRule[] }) {
                 Save
               </Button>
             </div>
-          </div>
+          </StaggerItem>
         );
       })}
 
@@ -134,6 +135,6 @@ export function SlaAdmin({ rules }: { rules: SlaRule[] }) {
         already resolved keep the SLA they were judged against. The clock pauses automatically
         while a ticket is <span className="font-medium">Waiting</span> on the requester.
       </p>
-    </div>
+    </Stagger>
   );
 }

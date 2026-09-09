@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/toast";
 import { Icons } from "@/components/shell/icons";
 import { api, ApiClientError } from "@/lib/api";
 import type { Department } from "@/lib/database.types";
+import { StaggerChildren } from "@/components/motion";
 
 type Usage = Record<string, { people: number; tickets: number }>;
 
@@ -45,7 +46,7 @@ export function DepartmentsAdmin({
   }
 
   return (
-    <div className="space-y-4">
+    <StaggerChildren className="space-y-4">
       <form
         onSubmit={(event) => {
           event.preventDefault();
@@ -199,6 +200,6 @@ export function DepartmentsAdmin({
         A retired department disappears from new-ticket routing and from the invite form, but every
         existing ticket keeps its tag so reporting stays accurate.
       </p>
-    </div>
+    </StaggerChildren>
   );
 }

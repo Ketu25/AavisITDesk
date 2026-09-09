@@ -17,6 +17,7 @@ import { api, ApiClientError } from "@/lib/api";
 import { ROLE_META, USER_STATUS_META } from "@/lib/constants";
 import { relativeTime } from "@/lib/format";
 import { USER_ROLES, type Profile, type UserRole } from "@/lib/database.types";
+import { StaggerChildren } from "@/components/motion";
 
 type Department = { id: string; name: string };
 
@@ -131,7 +132,7 @@ export function UsersAdmin({
   }
 
   return (
-    <div className="space-y-4">
+    <StaggerChildren className="space-y-4">
       {!serviceKeyConfigured && (
         <div className="card border-[rgb(245_158_11_/_0.4)] bg-[rgb(245_158_11_/_0.06)] p-4">
           <p className="flex items-center gap-2 text-[0.875rem] font-medium text-ink">
@@ -407,7 +408,7 @@ export function UsersAdmin({
           }}
         />
       </Modal>
-    </div>
+    </StaggerChildren>
   );
 }
 

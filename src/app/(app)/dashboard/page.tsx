@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageBody, PageHeader } from "@/components/shell/page-header";
 import { Stat } from "@/components/ui/stat";
-import { Reveal } from "@/components/motion";
+import { Reveal, StaggerChildren } from "@/components/motion";
 import { EmptyState } from "@/components/ui/states";
 import { Icons } from "@/components/shell/icons";
 import { DashboardList } from "@/components/tickets/dashboard-list";
@@ -131,7 +131,7 @@ export default async function DashboardPage() {
         {agentStats && (
           <Reveal index={0} className="space-y-3" role="region">
             <h2 className="eyebrow">Service desk</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <StaggerChildren className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Stat label="Open" value={agentStats.open} href="/queue" hint="Across all departments" />
               <Stat
                 label="Unassigned"
@@ -157,7 +157,7 @@ export default async function DashboardPage() {
                     : "No resolutions in the last 30 days"
                 }
               />
-            </div>
+            </StaggerChildren>
           </Reveal>
         )}
 
@@ -188,7 +188,7 @@ export default async function DashboardPage() {
           </div>
 
           {!isAgent && (
-            <div className="grid gap-3 sm:grid-cols-3">
+            <StaggerChildren className="grid gap-3 sm:grid-cols-3">
               <Stat label="Open" value={myOpen.length} href="/tickets" />
               <Stat
                 label="Waiting on you"
@@ -197,7 +197,7 @@ export default async function DashboardPage() {
                 hint={awaitingMe.length > 0 ? "Needs your reply or confirmation" : "Nothing pending"}
               />
               <Stat label="Raised in total" value={mine.length} />
-            </div>
+            </StaggerChildren>
           )}
 
           {mine.length === 0 ? (

@@ -1,3 +1,7 @@
+"use client";
+
+import { motion } from "motion/react";
+import { transition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
 export function PageHeader({
@@ -22,15 +26,32 @@ export function PageHeader({
           appears at lg. Kept off the `px` shorthand so the wider `sm`
           padding cannot override it. */}
       <div className="flex flex-wrap items-center justify-between gap-3 py-3.5 pr-4 pl-14 sm:pr-6 lg:pl-6">
-        <div className="min-w-0">
+        {/* Deliberately small: this replays on every navigation, so anything
+            larger would read as lag rather than polish. */}
+        <motion.div
+          key={title}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={transition.base}
+          className="min-w-0"
+        >
           <h1 className="truncate text-[0.9375rem] font-semibold tracking-tight text-ink">
             {title}
           </h1>
           {description && (
             <p className="mt-0.5 truncate text-[0.8125rem] text-ink-muted">{description}</p>
           )}
-        </div>
-        {actions && <div className="flex flex-none items-center gap-2">{actions}</div>}
+        </motion.div>
+        {actions && (
+          <motion.div
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...transition.base, delay: 0.05 }}
+            className="flex flex-none items-center gap-2"
+          >
+            {actions}
+          </motion.div>
+        )}
       </div>
     </header>
   );

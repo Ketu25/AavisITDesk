@@ -12,6 +12,7 @@ import { createClient } from "@/lib/supabase/client";
 import { api, ApiClientError } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
 import type { AppSettings, EmailAllowlist } from "@/lib/database.types";
+import { StaggerChildren } from "@/components/motion";
 
 type Agent = { id: string; full_name: string };
 type Endpoint = { functions_base_url: string | null; secret_is_set: boolean };
@@ -88,7 +89,7 @@ export function SettingsAdmin({
   }
 
   return (
-    <div className="space-y-4">
+    <StaggerChildren className="space-y-4">
       {/* ------------------------------------------------- access control */}
       <Section
         title="Who can be given an account"
@@ -465,7 +466,7 @@ export function SettingsAdmin({
           Last changed {relativeTime(settings.updated_at)}.
         </p>
       </Section>
-    </div>
+    </StaggerChildren>
   );
 }
 

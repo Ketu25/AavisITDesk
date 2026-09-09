@@ -11,6 +11,7 @@ import { OPEN_STATUSES, PRIORITY_META, STATUS_META } from "@/lib/constants";
 import { computeSla, indexRules, slaSortValue } from "@/lib/sla";
 import { TICKET_PRIORITIES, TICKET_STATUSES, type SlaRule } from "@/lib/database.types";
 import { cn } from "@/lib/utils";
+import { StaggerChildren } from "@/components/motion";
 
 type Filters = {
   sla: string;
@@ -185,7 +186,7 @@ export function QueueBoard({
   return (
     <div className="space-y-4">
       {/* Health strip */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <StaggerChildren className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <QuickFilter
           label="Open"
           value={summary.open}
@@ -218,7 +219,7 @@ export function QueueBoard({
             }))
           }
         />
-      </div>
+      </StaggerChildren>
 
       {/* Filter bar */}
       <div className="card flex flex-wrap items-center gap-2 p-2.5">

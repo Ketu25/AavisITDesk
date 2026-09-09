@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { motion } from "motion/react";
 import { BarList, ChartCard, Donut, TrendChart } from "./charts";
 import { Stat } from "@/components/ui/stat";
+import { Stagger, StaggerItem } from "@/components/motion";
 import { Spinner } from "@/components/ui/spinner";
 import { createClient } from "@/lib/supabase/client";
 import { PRIORITY_META, STATUS_META } from "@/lib/constants";
@@ -75,28 +76,36 @@ export function ReportsView({
         {pending && <Spinner className="size-4 text-ink-faint" />}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat label="Tickets raised" value={totals.total} hint={`Last ${days} days`} />
-        <Stat
-          label="Resolved"
-          value={totals.resolved + totals.closed}
-          tone="emerald"
-          suffix={totals.total ? `· ${resolutionRate}%` : undefined}
-          hint="Resolved or closed in range"
-        />
-        <Stat
-          label="Still open"
-          value={totals.open}
-          tone={totals.breached > 0 ? "amber" : undefined}
-          hint={`${totals.unassigned} unassigned · ${totals.breached} breached`}
-        />
-        <Stat
-          label="Reopened"
-          value={totals.reopened}
-          tone={totals.reopened > 0 ? "rose" : undefined}
-          hint="Fixes that didn't stick"
-        />
-      </div>
+      <Stagger className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StaggerItem>
+          <Stat label="Tickets raised" value={totals.total} hint={`Last ${days} days`} />
+        </StaggerItem>
+        <StaggerItem>
+          <Stat
+            label="Resolved"
+            value={totals.resolved + totals.closed}
+            tone="emerald"
+            suffix={totals.total ? `· ${resolutionRate}%` : undefined}
+            hint="Resolved or closed in range"
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <Stat
+            label="Still open"
+            value={totals.open}
+            tone={totals.breached > 0 ? "amber" : undefined}
+            hint={`${totals.unassigned} unassigned · ${totals.breached} breached`}
+          />
+        </StaggerItem>
+        <StaggerItem>
+          <Stat
+            label="Reopened"
+            value={totals.reopened}
+            tone={totals.reopened > 0 ? "rose" : undefined}
+            hint="Fixes that didn't stick"
+          />
+        </StaggerItem>
+      </Stagger>
 
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="card p-4">
