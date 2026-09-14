@@ -1,9 +1,21 @@
 "use client";
 
-import { motion } from "motion/react";
-import { transition } from "@/lib/motion";
+import { useEffect, useState } from "react";
+import { MobileNavTrigger } from "./mobile-nav";
 import { cn } from "@/lib/utils";
 
+/**
+ * The bar every screen hangs from.
+ *
+ * It does not animate its own arrival any more — <RouteTransition> brings the
+ * whole page in as one movement, and a header that faded separately made a
+ * single navigation look like two.
+ *
+ * What it does do is react to scroll: once the content has moved underneath
+ * it, the bar earns an edge. While the page is at rest the seam is invisible,
+ * which is the point — the chrome only asserts itself when it is overlapping
+ * something.
+ */
 export function PageHeader({
   title,
   description,
@@ -15,46 +27,54 @@ export function PageHeader({
   actions?: React.ReactNode;
   className?: string;
 }) {
+  const lifted = useScrolled();
+
   return (
     <header
+      data-lifted={lifted || undefined}
       className={cn(
-        "sticky top-0 z-30 border-b border-line bg-canvas/85 backdrop-blur-xl",
+        "sticky top-0 z-30 border-b bg-canvas/85 backdrop-blur-xl",
+        "border-transparent transition-[border-color,box-shadow] duration-300",
+        "data-[lifted]:border-line data-[lifted]:shadow-[var(--shadow-sm)]",
         className,
       )}
     >
-      {/* Left padding clears the mobile menu button until the sidebar
-          appears at lg. Kept off the `px` shorthand so the wider `sm`
-          padding cannot override it. */}
-      <div className="flex flex-wrap items-center justify-between gap-3 py-3.5 pr-4 pl-14 sm:pr-6 lg:pl-6">
-        {/* Deliberately small: this replays on every navigation, so anything
-            larger would read as lag rather than polish. */}
-        <motion.div
-          key={title}
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={transition.base}
-          className="min-w-0"
-        >
-          <h1 className="truncate text-[0.9375rem] font-semibold tracking-tight text-ink">
-            {title}
-          </h1>
-          {description && (
-            <p className="mt-0.5 truncate text-[0.8125rem] text-ink-muted">{description}</p>
-          )}
-        </motion.div>
-        {actions && (
-          <motion.div
-            initial={{ opacity: 0, y: 4 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ ...transition.base, delay: 0.05 }}
-            className="flex flex-none items-center gap-2"
-          >
-            {actions}
-          </motion.div>
-        )}
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-4 py-3 sm:px-6">
+        {/* The drawer trigger sits inside the bar rather than floating over
+            it, so the title no longer has to reserve a hole to avoid it. */}
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <MobileNavTrigger />
+          <div className="min-w-0">
+            <h1 className="truncate text-[0.9375rem] font-semibold tracking-tight text-ink">
+              {title}
+            </h1>
+            {description && (
+              <p className="mt-0.5 truncate text-[0.8125rem] text-ink-muted">{description}</p>
+            )}
+          </div>
+        </div>
+        {actions && <div className="flex flex-none items-center gap-2">{actions}</div>}
       </div>
     </header>
   );
+}
+
+/**
+ * True once the window has scrolled past the point where the header overlaps
+ * content. Read from a passive listener rather than a scroll-linked motion
+ * value: this is a boolean that flips once, not something that tracks.
+ */
+function useScrolled(threshold = 8) {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const read = () => setScrolled(window.scrollY > threshold);
+    read();
+    window.addEventListener("scroll", read, { passive: true });
+    return () => window.removeEventListener("scroll", read);
+  }, [threshold]);
+
+  return scrolled;
 }
 
 export function PageBody({

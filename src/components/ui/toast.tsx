@@ -51,7 +51,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <div className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2">
+      <div
+        role="status"
+        aria-live="polite"
+        aria-atomic="false"
+        className="pointer-events-none fixed bottom-4 right-4 z-[100] flex w-[min(24rem,calc(100vw-2rem))] flex-col gap-2"
+      >
         <AnimatePresence initial={false}>
           {toasts.map((toast) => (
             <motion.div
@@ -78,7 +83,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               </div>
               <button
                 onClick={() => setToasts((p) => p.filter((t) => t.id !== toast.id))}
-                className="flex-none self-start text-ink-faint transition-colors hover:text-ink"
+                className="tap-safe flex-none self-start text-ink-faint transition-colors hover:text-ink"
                 aria-label="Dismiss"
               >
                 <svg viewBox="0 0 16 16" className="size-3.5" fill="none">

@@ -10,6 +10,7 @@ import { Icons } from "@/components/shell/icons";
 import { OPEN_STATUSES, PRIORITY_META, STATUS_META } from "@/lib/constants";
 import { computeSla, indexRules, slaSortValue } from "@/lib/sla";
 import { TICKET_PRIORITIES, TICKET_STATUSES, type SlaRule } from "@/lib/database.types";
+import { spring, transition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { StaggerChildren } from "@/components/motion";
 
@@ -222,7 +223,7 @@ export function QueueBoard({
       </StaggerChildren>
 
       {/* Filter bar */}
-      <div className="card flex flex-wrap items-center gap-2 p-2.5">
+      <div className="card flex flex-col gap-2 p-2.5 sm:flex-row sm:flex-wrap sm:items-center">
         <div className="relative min-w-[12rem] flex-1">
           <Icons.search className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-faint" />
           <Input
@@ -236,7 +237,7 @@ export function QueueBoard({
         <Select
           value={filters.status}
           onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-          className="w-auto min-w-[8rem]"
+          className="w-full sm:w-auto sm:min-w-[8rem]"
         >
           <option value="">Any status</option>
           {TICKET_STATUSES.map((s) => (
@@ -249,7 +250,7 @@ export function QueueBoard({
         <Select
           value={filters.priority}
           onChange={(e) => setFilters((f) => ({ ...f, priority: e.target.value }))}
-          className="w-auto min-w-[7.5rem]"
+          className="w-full sm:w-auto sm:min-w-[7.5rem]"
         >
           <option value="">Any priority</option>
           {TICKET_PRIORITIES.map((p) => (
@@ -262,7 +263,7 @@ export function QueueBoard({
         <Select
           value={filters.department}
           onChange={(e) => setFilters((f) => ({ ...f, department: e.target.value }))}
-          className="w-auto min-w-[9rem]"
+          className="w-full sm:w-auto sm:min-w-[9rem]"
         >
           <option value="">Any department</option>
           {departments.map((d) => (
@@ -275,7 +276,7 @@ export function QueueBoard({
         <Select
           value={filters.assignee}
           onChange={(e) => setFilters((f) => ({ ...f, assignee: e.target.value }))}
-          className="w-auto min-w-[9rem]"
+          className="w-full sm:w-auto sm:min-w-[9rem]"
         >
           <option value="">Any assignee</option>
           <option value="me">Assigned to me</option>
@@ -290,7 +291,7 @@ export function QueueBoard({
         <Select
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          className="w-auto min-w-[9rem]"
+          className="w-full sm:w-auto sm:min-w-[9rem]"
         >
           <option value="">Any category</option>
           {categories.map((c) => (
@@ -322,7 +323,8 @@ export function QueueBoard({
                     setFilters((f) => ({ ...f, status: "" }));
                   }}
                   className={cn(
-                    "relative rounded-[7px] px-3 py-1.5 text-[0.8125rem] font-medium transition-colors",
+                    "relative flex min-h-11 items-center rounded-[7px] px-3.5 sm:min-h-8 sm:px-3",
+                    "text-[0.8125rem] font-medium transition-colors",
                     active ? "text-ink" : "text-ink-faint hover:text-ink-muted",
                   )}
                 >
@@ -339,9 +341,15 @@ export function QueueBoard({
               );
             })}
           </div>
-          <p className="tabular text-[0.8125rem] text-ink-muted">
+          <motion.p
+            key={visible.length}
+            initial={{ opacity: 0, y: -3 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={transition.fast}
+            className="tabular text-[0.8125rem] text-ink-muted"
+          >
             {visible.length} shown
-          </p>
+          </motion.p>
         </div>
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-[9px] border border-line bg-surface-sunk p-0.5">
@@ -352,7 +360,8 @@ export function QueueBoard({
                   key={item.key}
                   onClick={() => setSort(item.key)}
                   className={cn(
-                    "relative rounded-[6px] px-2.5 py-1 text-[0.75rem] font-medium transition-colors",
+                    "relative flex min-h-11 items-center rounded-[6px] px-3 sm:min-h-7 sm:px-2.5",
+                    "text-[0.75rem] font-medium transition-colors",
                     active ? "text-ink" : "text-ink-faint hover:text-ink-muted",
                   )}
                 >
@@ -432,12 +441,18 @@ function QuickFilter({
   onClick: () => void;
 }) {
   return (
-    <button
+    <motion.button
       onClick={onClick}
       data-tone={tone}
+      whileTap={{ scale: 0.98 }}
+      transition={spring.snappy}
+      aria-pressed={active}
       className={cn(
-        "card px-3 py-2.5 text-left transition-colors",
-        active ? "border-accent-line bg-accent-soft" : "hover:bg-surface-hover",
+        "card h-full w-full min-h-11 px-3 py-2.5 text-left",
+        "transition-[background-color,border-color,box-shadow] duration-200",
+        active
+          ? "border-accent-line bg-accent-soft"
+          : "hover:border-line-strong hover:bg-surface-hover",
       )}
     >
       <p className="text-[0.6875rem] font-semibold uppercase tracking-wider text-ink-faint">
@@ -449,6 +464,6 @@ function QuickFilter({
       >
         {value}
       </p>
-    </button>
+    </motion.button>
   );
 }
