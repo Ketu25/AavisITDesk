@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { useEscape, useFocusTrap, useScrollLock } from "./use-overlay";
 import { cn } from "@/lib/utils";
 
 export function Modal({
@@ -19,16 +20,14 @@ export function Modal({
   children: React.ReactNode;
   size?: "sm" | "md" | "lg";
 }) {
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    document.addEventListener("keydown", onKey);
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      document.body.style.overflow = "";
-    };
-  }, [open, onClose]);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Escape and the scroll lock were already here; the focus trap was not, so
+  // Tab used to walk straight out of an open dialog and into the page behind
+  // it. All three now come from one place, shared with the nav drawer.
+  useEscape(open, onClose);
+  useScrollLock(open);
+  useFocusTrap(panelRef, open);
 
   return (
     <AnimatePresence>
@@ -43,15 +42,17 @@ export function Modal({
             className="fixed inset-0 bg-black/45 backdrop-blur-[3px]"
           />
           <motion.div
+            ref={panelRef}
             role="dialog"
             aria-modal="true"
             aria-label={title}
+            tabIndex={-1}
             initial={{ opacity: 0, y: 12, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.98 }}
             transition={{ type: "spring", stiffness: 380, damping: 32 }}
             className={cn(
-              "relative my-auto w-full rounded-2xl border border-line-strong",
+              "relative my-auto w-full rounded-2xl border border-line-strong outline-none",
               "bg-canvas-raised shadow-[var(--shadow-lg)]",
               size === "sm" && "max-w-sm",
               size === "md" && "max-w-lg",
@@ -70,7 +71,7 @@ export function Modal({
               <button
                 onClick={onClose}
                 aria-label="Close"
-                className="-mr-1 flex-none rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-surface-hover hover:text-ink"
+                className="tap-safe -mr-1 flex-none rounded-lg p-1.5 text-ink-faint transition-colors hover:bg-surface-hover hover:text-ink"
               >
                 <svg viewBox="0 0 16 16" className="size-4" fill="none">
                   <path d="m4 4 8 8m0-8-8 8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />

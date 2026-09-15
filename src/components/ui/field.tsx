@@ -63,7 +63,7 @@ export function Field({
 
 export const Input = forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
   function Input({ className, ...props }, ref) {
-    return <input ref={ref} className={cn(CONTROL, "h-9", className)} {...props} />;
+    return <input ref={ref} className={cn(CONTROL, "h-11 sm:h-9", className)} {...props} />;
   },
 );
 
@@ -85,7 +85,7 @@ export const Select = forwardRef<HTMLSelectElement, React.ComponentProps<"select
       <div className="relative">
         <select
           ref={ref}
-          className={cn(CONTROL, "h-9 cursor-pointer appearance-none pr-8", className)}
+          className={cn(CONTROL, "h-11 cursor-pointer appearance-none pr-8 sm:h-9", className)}
           {...props}
         >
           {children}
@@ -133,7 +133,7 @@ export function Switch({
         disabled={disabled}
         onClick={() => onChange(!checked)}
         className={cn(
-          "relative h-[22px] w-[38px] flex-none rounded-full border transition-colors duration-200",
+          "tap-safe relative h-[22px] w-[38px] flex-none rounded-full border transition-colors duration-200",
           checked ? "border-transparent bg-accent" : "border-line bg-surface-sunk",
           disabled && "opacity-50",
         )}

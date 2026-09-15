@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "motion/react";
 import { AnimatedNumber } from "@/components/motion";
 import { transition } from "@/lib/motion";
@@ -25,8 +26,10 @@ export function Stat({
     <div
       data-tone={tone}
       className={cn(
-        "card group relative overflow-hidden p-4 transition-colors duration-200",
-        href && "hover:border-line-strong hover:bg-surface-hover",
+        "card group relative overflow-hidden p-4",
+        "transition-[background-color,border-color,box-shadow,transform] duration-200",
+        href &&
+          "hover:-translate-y-px hover:border-line-strong hover:bg-surface-hover hover:shadow-[var(--shadow-md)]",
       )}
     >
       <p className="eyebrow">{label}</p>
@@ -62,8 +65,14 @@ export function Stat({
   if (!href) return body;
 
   return (
-    <a href={href} className="block rounded-[14px] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[var(--accent-soft)]">
+    <Link
+      href={href}
+      className={cn(
+        "block rounded-[var(--radius-card)] focus-visible:outline-none",
+        "focus-visible:ring-4 focus-visible:ring-[var(--accent-soft)]",
+      )}
+    >
       {body}
-    </a>
+    </Link>
   );
 }

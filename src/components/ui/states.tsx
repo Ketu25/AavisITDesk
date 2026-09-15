@@ -64,9 +64,7 @@ export function EmptyState({
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return (
-    <div className={cn("shimmer rounded-md bg-surface-sunk", className)} />
-  );
+  return <div className={cn("shimmer rounded-md bg-surface-sunk", className)} aria-hidden />;
 }
 
 export function SkeletonRows({ rows = 5 }: { rows?: number }) {

@@ -134,24 +134,47 @@ Wrangler needs **Node 22+** locally. Cloudflare's build image already uses 24.
 
 In the dashboard, under **your Worker → Settings → Build**:
 
-| Setting | Value |
-|---|---|
-| Build command | `npm run build:cf` |
-| Deploy command | `npx wrangler deploy` |
+| Branch | Build command | Deploy command |
+|---|---|---|
+| Production | `npm run build` | `npx wrangler deploy` |
+| Non-production | `npm run build` | `npx wrangler versions upload` |
 
-The build command **must** be `build:cf`, not `build`. `npm run build` is plain
-`next build`, which produces `.next/` — the deploy step needs the OpenNext
-bundle in `.open-next/`, in particular the compiled config at
-`.open-next/.build/open-next.config.mjs`. With the wrong build command the
-deploy fails with:
+**`npm run build` is the OpenNext build, not `next build`.** That is deliberate.
+Cloudflare defaults the build command to `npm run build` and there are *two*
+build configurations — production and non-production — so the previous layout,
+where the real build lived under a separate `build:cf`, broke every time one of
+them was left at the default. Three builds failed that way before the scripts
+were changed to make the default correct. Plain `next build` is still available
+as `build:next` for a fast compile-and-typecheck loop.
+
+The deploy step needs the OpenNext bundle in `.open-next/` — the entry point at
+`.open-next/worker.js` (what `wrangler.jsonc` sets as `main`) and the compiled
+config at `.open-next/.build/open-next.config.mjs`. `next build` produces only
+`.next/`, so if the build command is ever pointed back at plain Next, the build
+*succeeds* and the deploy fails afterwards — with `wrangler versions upload`:
+
+```
+✘ [ERROR] The entry-point file at ".open-next/worker.js" was not found.
+```
+
+or, with `wrangler deploy`:
 
 ```
 ERROR Could not find compiled Open Next config, did you run the build command?
 ```
 
+To tell which build actually ran, read the line after `Executing user build
+command` in the log. The correct one starts `rm -rf .next .open-next && …
+opennextjs-cloudflare build`; a bare `next build` is the broken case.
+
 `opennextjs-cloudflare build` runs `next build` itself, so Next is only built
 once. (Setting the deploy command to `npm run deploy` also works, but then Next
 is built twice per deploy for no benefit.)
+
+> **Node 22+ is required locally.** The build fails on older runtimes with
+> `SyntaxError: Invalid regular expression flags` from the ESM loader, which
+> names no file and does not look like a version problem. Cloudflare's build
+> image already uses Node 24.
 
 ### Worker name
 
@@ -487,7 +510,8 @@ what is live on the project.
 | Command | What it does |
 |---|---|
 | `npm run dev` | Development server on :3000 |
-| `npm run build` | Production build |
+| `npm run build` | Production build — the OpenNext bundle Cloudflare deploys |
+| `npm run build:next` | Plain `next build`, for a fast compile and typecheck |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
 | `npm run bootstrap:admin -- <email> "<Name>"` | Invite or promote an administrator |

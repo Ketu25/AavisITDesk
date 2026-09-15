@@ -7,17 +7,23 @@
    resolves through these so a theme switch never leaves a stale value behind.
    =========================================================================== */
 :root {
-  /* Cool paper, not warm cream — this is a lab instrument, not stationery. */
-  --canvas:        #f4f6f8;
+  /* Cool paper, not warm cream — this is a lab instrument, not stationery.
+     The canvas is deliberately a full step below white: a white card on a
+     near-white ground has no edge to stand on, which is what made the light
+     theme read as washed out. Everything raised is #fff, and the gap between
+     them is what does the lifting. */
+  --canvas:        #e9edf3;
   --canvas-raised: #ffffff;
   --surface:       #ffffff;
-  --surface-hover: #edf1f5;
-  --surface-sunk:  #e9eef3;
-  --line:          rgb(14 30 45 / 0.10);
-  --line-strong:   rgb(14 30 45 / 0.18);
+  --surface-hover: #f1f5f9;
+  --surface-sunk:  #dfe5ee;
+  --line:          rgb(14 30 45 / 0.13);
+  --line-strong:   rgb(14 30 45 / 0.23);
   --ink:           #0e1720;
-  --ink-muted:     #55677a;
-  --ink-faint:     #8093a5;
+  --ink-muted:     #4e6072;
+  /* Was #8093a5 — 3.1:1 on white, under the 4.5:1 floor for the micro-labels
+     and timestamps it is used on. This clears it. */
+  --ink-faint:     #69798b;
   --accent:        #2a4fd7;
   --accent-ink:    #ffffff;
   --accent-soft:   rgb(42 79 215 / 0.09);
@@ -42,10 +48,23 @@
   --mesh-cyan:   rgb(20 120 160 / 0.10);
   --vignette:    rgb(14 30 45 / 0.05);
 
-  --shadow-sm:     0 1px 2px rgb(14 30 45 / 0.06);
-  --shadow-md:     0 4px 16px -4px rgb(14 30 45 / 0.12);
-  --shadow-lg:     0 24px 60px -18px rgb(14 30 45 / 0.24);
+  --shimmer:       rgb(14 30 45 / 0.07);
+  --shadow-sm:     0 1px 2px rgb(14 30 45 / 0.07), 0 1px 1px -1px rgb(14 30 45 / 0.05);
+  --shadow-md:     0 4px 16px -4px rgb(14 30 45 / 0.14), 0 1px 2px rgb(14 30 45 / 0.05);
+  --shadow-lg:     0 24px 60px -18px rgb(14 30 45 / 0.26);
   --glow:          0 0 0 1px rgb(42 79 215 / 0.18), 0 8px 32px -10px rgb(42 79 215 / 0.34);
+
+  /* The CSS half of the motion vocabulary in lib/motion.ts. Keep the two in
+     step: a transition written here and a variant written there should be the
+     same move. These are theme-independent, so they live on :root only. */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ease-entrance: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit:     cubic-bezier(0.4, 0, 1, 1);
+  --dur-instant:   120ms;
+  --dur-fast:      180ms;
+  --dur-base:      240ms;
+  --dur-slow:      360ms;
+
   color-scheme: light;
 }
 
@@ -75,6 +94,7 @@
   --mesh-cyan:   rgb(120 190 220 / 0.105);
   --vignette:    rgb(3 6 11 / 0.55);
 
+  --shimmer:       rgb(255 255 255 / 0.09);
   --shadow-sm:     0 1px 2px rgb(0 0 0 / 0.44);
   --shadow-md:     0 8px 24px -8px rgb(0 0 0 / 0.62);
   --shadow-lg:     0 30px 70px -20px rgb(0 0 0 / 0.8);
@@ -337,6 +357,21 @@
 }
 
 @layer utilities {
+  /* Grows a control's hit area to the 44px touch minimum without changing a
+     pixel of its layout. Only for controls with room around them — on a
+     segmented control the neighbours are closer than 44px apart, so those get
+     real height on touch widths instead. */
+  .tap-safe { position: relative; }
+  .tap-safe::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    translate: -50% -50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+  }
+
   .text-balance { text-wrap: balance; }
   .text-pretty  { text-wrap: pretty; }
 
@@ -358,8 +393,8 @@
   position: absolute;
   inset: 0;
   transform: translateX(-100%);
-  background: linear-gradient(90deg, transparent, var(--surface-hover), transparent);
-  animation: shimmer 1.6s infinite;
+  background: linear-gradient(90deg, transparent, var(--shimmer), transparent);
+  animation: shimmer 1.6s var(--ease-standard) infinite;
 }
 
 @keyframes pulse-ring {
@@ -373,6 +408,16 @@
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* The backdrop drift is the one thing here that never stops, so it is also
+     the one thing most worth switching off. */
+  .backdrop-mesh,
+  .backdrop-mesh-alt {
+    animation: none !important;
   }
 }

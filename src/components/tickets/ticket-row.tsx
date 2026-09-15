@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { PriorityPill, SlaPill, StatusPill } from "./pills";
 import { SlaTrack } from "./sla-instrument";
 import { Avatar } from "@/components/ui/avatar";
 import { relativeTime } from "@/lib/format";
-import { spring, stagger } from "@/lib/motion";
+import { spring, stagger, transition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { SlaRule, Ticket, TicketPriority } from "@/lib/database.types";
 
@@ -29,19 +29,35 @@ export function TicketRow({
   showAssignee?: boolean;
   showRequester?: boolean;
 }) {
+  const reduced = useReducedMotion();
+
   return (
     <motion.li
       layout="position"
-      initial={{ opacity: 0, y: 8 }}
+      initial={reduced ? { opacity: 0 } : { opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.98 }}
-      transition={{ ...spring.arrive, delay: stagger(index) }}
+      // The exit runs its own timing: inheriting the entrance delay meant a
+      // row filtered out of the queue sat there for a third of a second first.
+      exit={{ opacity: 0, scale: 0.98, transition: { ...transition.fast, delay: 0 } }}
+      transition={{
+        ...(reduced ? transition.fast : spring.arrive),
+        delay: reduced ? 0 : stagger(index),
+        // Re-sorting is a direct response to a click, so it must not wait for
+        // the cascade. Rows travel to their new place immediately; only
+        // arrivals are staggered.
+        layout: reduced ? { duration: 0 } : { ...spring.gentle, delay: 0 },
+      }}
     >
       <Link
         href={`/tickets/${ticket.id}`}
         className={cn(
           "group relative flex flex-col gap-2.5 border-b border-line px-4 py-3.5 last:border-b-0",
           "transition-colors duration-150 hover:bg-surface-hover sm:flex-row sm:items-center sm:gap-4",
+          // A hairline that slides out of the leading edge on hover: the row
+          // is a link to somewhere, and this is the direction it goes.
+          "before:absolute before:inset-y-0 before:left-0 before:w-[2px] before:origin-top",
+          "before:scale-y-0 before:bg-accent before:transition-transform before:duration-200",
+          "before:[transition-timing-function:var(--ease-entrance)] hover:before:scale-y-100",
         )}
       >
         <SlaTrack
