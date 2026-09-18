@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { apiError, ApiError, requireApiAdmin } from "@/lib/api-auth";
+import { apiError, ApiError, requireApiAdmin, routeUuid } from "@/lib/api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendPasswordReset } from "@/lib/provisioning";
 
@@ -10,7 +10,7 @@ export async function POST(
 ) {
   try {
     await requireApiAdmin();
-    const { id } = await params;
+    const id = routeUuid((await params).id);
 
     const admin = createAdminClient();
     const { data: profile } = await admin

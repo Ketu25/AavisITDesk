@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { apiError, ApiError, requireApiAgent } from "@/lib/api-auth";
+import { apiError, ApiError, requireApiAgent, routeUuid } from "@/lib/api-auth";
 import { createAdminClient, hasServiceRoleKey } from "@/lib/supabase/admin";
 
 /**
@@ -13,7 +13,7 @@ export async function POST(
 ) {
   try {
     await requireApiAgent();
-    const { id } = await params;
+    const id = routeUuid((await params).id);
 
     if (!hasServiceRoleKey()) {
       throw new ApiError(503, "Auto-assignment needs SUPABASE_SERVICE_ROLE_KEY to be configured.");
