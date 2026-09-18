@@ -17,6 +17,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useIsClient } from "@/components/motion/use-is-client";
 import { useEscape } from "./use-overlay";
+import { useAnchoredPanel } from "./use-anchored-panel";
 import { spring, transition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 
@@ -114,28 +115,13 @@ function commitValue(node: HTMLSelectElement, next: string) {
   node.dispatchEvent(new Event("change", { bubbles: true }));
 }
 
-/** Breathing room kept between the panel and the edge of the viewport. */
-const VIEWPORT_MARGIN = 8;
-/** Distance between the trigger and the panel. */
-const TRIGGER_GAP = 6;
 /** The tallest the panel grows to when there is room for it. */
 const MAX_PANEL_HEIGHT = 288;
 /** One option row plus the panel's own padding and borders. Only ever used to
  *  guess which side of the trigger fits the list better — the measured clamp
- *  below is what actually keeps the panel on screen. */
+ *  in useAnchoredPanel is what actually keeps the panel on screen. */
 const ROW_HEIGHT = 30;
 const PANEL_CHROME = 10;
-
-type Placement = {
-  left: number;
-  width: number;
-  maxHeight: number;
-  /** Distance from the top of the viewport, for a panel below the trigger. */
-  top: number;
-  /** Distance from the bottom, for a panel flipped above it. */
-  bottom: number;
-  above: boolean;
-};
 
 const CONTROL_BASE =
   "w-full rounded-[10px] border border-line bg-surface-sunk px-3 text-sm text-ink " +
@@ -166,7 +152,6 @@ export const Select = forwardRef<
 
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
-  const [placement, setPlacement] = useState<Placement | null>(null);
   // Every call site in this app is controlled, but an uncontrolled instance
   // still has to render the right label. That fallback is tracked in state
   // rather than read off the DOM node: reading `selectRef.current` during
@@ -182,68 +167,23 @@ export const Select = forwardRef<
     props.value !== undefined ? String(props.value) : uncontrolledValue;
   const selected = options.find((option) => option.value === currentValue);
 
-  /**
-   * Places the panel inside the viewport rather than merely below the trigger.
-   *
-   * A fixed panel pinned to `box.bottom` hangs off the bottom of the screen for
-   * every dropdown in the lower third of a page — the role selects on the last
-   * rows of the user table, the priority select in a ticket's sidebar — and the
-   * part that runs past the edge cannot be reached at all. So: clamp to the
-   * viewport on both axes, flip above when below cannot hold the list, and cap
-   * the height to whatever the chosen side actually has. The panel already
-   * scrolls, so a cap costs nothing; overflowing costs the options.
-   */
-  const measure = useCallback(() => {
-    const node = triggerRef.current;
-    if (!node) return;
-
-    const box = node.getBoundingClientRect();
-    // clientWidth/clientHeight exclude the scrollbars, which is the box a
-    // `position: fixed` element is laid out in. innerWidth would let the
-    // panel slide under a vertical scrollbar.
-    const vw = document.documentElement.clientWidth;
-    const vh = document.documentElement.clientHeight;
-
-    // The panel tracks the trigger's width, so this only bites on a narrow
-    // window or a trigger sitting hard against an edge — but there it is the
-    // difference between a readable list and one with its right half gone.
-    const width = Math.min(box.width, vw - VIEWPORT_MARGIN * 2);
-    const left = Math.min(
-      Math.max(VIEWPORT_MARGIN, box.left),
-      Math.max(VIEWPORT_MARGIN, vw - width - VIEWPORT_MARGIN),
-    );
-
-    const spaceBelow = vh - box.bottom - TRIGGER_GAP - VIEWPORT_MARGIN;
-    const spaceAbove = box.top - TRIGGER_GAP - VIEWPORT_MARGIN;
-
-    // What the list would like to be. Asking for this rather than for the cap
-    // keeps a short list from flipping sides just because 288px would not fit.
-    const wanted = Math.min(
-      MAX_PANEL_HEIGHT,
-      options.length * ROW_HEIGHT + PANEL_CHROME,
-    );
-
-    // Flip only when below genuinely cannot hold the list and above does
-    // better. A panel that changes sides over a couple of pixels reads as a
-    // glitch, so the test is deliberately not "is there room for all of it".
-    const above = spaceBelow < wanted && spaceAbove > spaceBelow;
-
-    const room = Math.max(above ? spaceAbove : spaceBelow, 0);
-
-    setPlacement({
-      left,
-      width,
-      maxHeight: Math.min(wanted, room),
-      top: box.bottom + TRIGGER_GAP,
-      bottom: vh - box.top + TRIGGER_GAP,
-      above,
-    });
-  }, [options.length]);
-
   const close = useCallback(() => {
     setOpen(false);
     setActiveIndex(-1);
   }, []);
+
+  // Placement, the outside-press dismiss and the scroll tracking all come from
+  // the shared hook — the row-actions Menu needs exactly the same behaviour,
+  // and two copies of viewport-collision maths is one copy too many.
+  const { placement, measure } = useAnchoredPanel({
+    open,
+    onClose: close,
+    anchorRef: triggerRef,
+    panelRef,
+    width: "anchor",
+    desiredHeight: options.length * ROW_HEIGHT + PANEL_CHROME,
+    maxHeight: MAX_PANEL_HEIGHT,
+  });
 
   const openPanel = useCallback(() => {
     // Measured in the event handler, not an effect: no `setState` in an
@@ -286,55 +226,6 @@ export const Select = forwardRef<
   // dropdown alone. Both listen on `document`, and the Modal registered first,
   // so the only way to get there before it is the capture phase.
   useEscape(open, close, { capture: true, stopPropagation: true });
-
-  // Keeps the portalled panel attached to its trigger while the page moves,
-  // and dismisses it on an outside press. The state writes live in listener
-  // callbacks, not in the effect body.
-  useEffect(() => {
-    if (!open) return;
-
-    const onScroll = (event: Event) => {
-      // Scrolling inside the panel is a long option list being read, not
-      // the page moving underneath it.
-      if (panelRef.current?.contains(event.target as Node)) return;
-
-      // Once the trigger has scrolled out of the viewport the panel is
-      // pointing at nothing, so it closes — the same thing a native select
-      // does rather than leaving a menu floating over unrelated content.
-      const box = triggerRef.current?.getBoundingClientRect();
-      if (
-        box &&
-        (box.bottom < 0 ||
-          box.top > document.documentElement.clientHeight ||
-          box.right < 0 ||
-          box.left > document.documentElement.clientWidth)
-      ) {
-        close();
-        return;
-      }
-
-      measure();
-    };
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target as Node;
-      if (
-        panelRef.current?.contains(target) ||
-        triggerRef.current?.contains(target)
-      )
-        return;
-      close();
-    };
-
-    window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", measure);
-    document.addEventListener("pointerdown", onPointerDown, true);
-
-    return () => {
-      window.removeEventListener("scroll", onScroll, true);
-      window.removeEventListener("resize", measure);
-      document.removeEventListener("pointerdown", onPointerDown, true);
-    };
-  }, [open, measure, close]);
 
   // With the panel's height clamped to the room available, arrowing past the
   // visible rows would otherwise walk an active option the user cannot see.

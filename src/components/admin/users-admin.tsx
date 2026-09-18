@@ -2,20 +2,16 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
-import { Badge } from "@/components/ui/badge";
-import { Avatar } from "@/components/ui/avatar";
 import { Modal } from "@/components/ui/modal";
-import { EmptyState } from "@/components/ui/states";
 import { useToast } from "@/components/ui/toast";
 import { Icons } from "@/components/shell/icons";
+import { PeopleTable } from "./people-table";
 import { CsvImport } from "./csv-import";
 import { CredentialsPanel, type IssuedCredential } from "./credentials-panel";
 import { api, ApiClientError } from "@/lib/api";
-import { ROLE_META, USER_STATUS_META } from "@/lib/constants";
-import { relativeTime } from "@/lib/format";
+import { ROLE_META } from "@/lib/constants";
 import { USER_ROLES, type Profile, type UserRole } from "@/lib/database.types";
 import { StaggerChildren } from "@/components/motion";
 
@@ -197,178 +193,18 @@ export function UsersAdmin({
         </Button>
       </div>
 
-      <div className="card overflow-hidden">
-        {visible.length === 0 ? (
-          <EmptyState
-            icon={<Icons.people />}
-            title="Nobody matches"
-            description="Adjust the filters, or invite someone new."
-          />
-        ) : (
-          <ul>
-            <AnimatePresence initial={false} mode="popLayout">
-              {visible.map((user, index) => {
-                const stale = inviteIsStale(user);
-                const isSelf = user.id === viewerId;
-
-                return (
-                  <motion.li
-                    key={user.id}
-                    layout="position"
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ delay: Math.min(index * 0.015, 0.2) }}
-                    className="flex flex-wrap items-center gap-3 border-b border-line px-4 py-3 last:border-b-0"
-                  >
-                    <Avatar name={user.full_name} id={user.id} size="md" />
-
-                    <div className="min-w-0 flex-1">
-                      <p className="flex items-center gap-1.5 truncate text-[0.875rem] font-medium text-ink">
-                        {user.full_name}
-                        {isSelf && (
-                          <span className="text-[0.6875rem] font-normal text-ink-faint">you</span>
-                        )}
-                      </p>
-                      <p className="truncate text-[0.75rem] text-ink-faint">{user.email}</p>
-                    </div>
-
-                    <div className="flex flex-none items-center gap-1.5">
-                      <Badge tone={USER_STATUS_META[user.status].tone}>
-                        {USER_STATUS_META[user.status].label}
-                      </Badge>
-                      {stale && (
-                        <Badge tone="rose" dot={false}>
-                          Invite expired
-                        </Badge>
-                      )}
-                    </div>
-
-                    <Select
-                      aria-label={`Department for ${user.full_name}`}
-                      value={user.department_id ?? ""}
-                      disabled={!serviceKeyConfigured || busy === `dept-${user.id}`}
-                      className="w-auto min-w-[8.5rem] flex-none"
-                      onChange={(e) =>
-                        act(
-                          `dept-${user.id}`,
-                          () =>
-                            api(`/api/admin/users/${user.id}`, {
-                              method: "PATCH",
-                              json: { department_id: e.target.value || null },
-                            }),
-                          "Department updated",
-                        )
-                      }
-                    >
-                      <option value="">No department</option>
-                      {departments.map((d) => (
-                        <option key={d.id} value={d.id}>
-                          {d.name}
-                        </option>
-                      ))}
-                    </Select>
-
-                    <Select
-                      aria-label={`Role for ${user.full_name}`}
-                      value={user.role}
-                      disabled={!serviceKeyConfigured || isSelf || busy === `role-${user.id}`}
-                      className="w-auto min-w-[6.5rem] flex-none"
-                      onChange={(e) =>
-                        act(
-                          `role-${user.id}`,
-                          () =>
-                            api(`/api/admin/users/${user.id}`, {
-                              method: "PATCH",
-                              json: { role: e.target.value as UserRole },
-                            }),
-                          "Role updated",
-                        )
-                      }
-                    >
-                      {USER_ROLES.map((r) => (
-                        <option key={r} value={r}>
-                          {ROLE_META[r].label}
-                        </option>
-                      ))}
-                    </Select>
-
-                    <div className="flex flex-none items-center gap-1">
-                      {user.status !== "disabled" && user.id !== viewerId && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          disabled={!serviceKeyConfigured}
-                          loading={busy === `temp-${user.id}`}
-                          title="Issue a new temporary password and show it once. Signs out any active session."
-                          onClick={() => issueTempPassword(user)}
-                        >
-                          New password
-                        </Button>
-                      )}
-
-                      {isSelf ? (
-                        <span className="w-[4.5rem]" />
-                      ) : user.status === "disabled" ? (
-                        <Button
-                          size="sm"
-                          variant="secondary"
-                          disabled={!serviceKeyConfigured}
-                          loading={busy === `status-${user.id}`}
-                          onClick={() =>
-                            act(
-                              `status-${user.id}`,
-                              () =>
-                                api(`/api/admin/users/${user.id}`, {
-                                  method: "PATCH",
-                                  json: { status: "active" },
-                                }),
-                              "Account re-enabled",
-                            )
-                          }
-                        >
-                          Enable
-                        </Button>
-                      ) : (
-                        <Button
-                          size="sm"
-                          variant="danger"
-                          disabled={!serviceKeyConfigured}
-                          loading={busy === `status-${user.id}`}
-                          title="Blocks sign-in. All tickets and comments are kept."
-                          onClick={() =>
-                            act(
-                              `status-${user.id}`,
-                              () =>
-                                api(`/api/admin/users/${user.id}`, {
-                                  method: "PATCH",
-                                  json: { status: "disabled" },
-                                }),
-                              "Account disabled",
-                            )
-                          }
-                        >
-                          Disable
-                        </Button>
-                      )}
-                    </div>
-
-                    <p className="w-full text-[0.6875rem] text-ink-faint sm:w-auto sm:flex-none">
-                      {user.status === "disabled"
-                        ? `Disabled ${relativeTime(user.disabled_at)}`
-                        : user.password_set_at
-                          ? `Active since ${relativeTime(user.activated_at)}`
-                          : `Invited ${relativeTime(
-                              user.last_invite_sent_at ?? user.invited_at,
-                            )} · password not set yet`}
-                    </p>
-                  </motion.li>
-                );
-              })}
-            </AnimatePresence>
-          </ul>
-        )}
-      </div>
+      <PeopleTable
+        users={visible}
+        total={users.length}
+        departments={departments}
+        viewerId={viewerId}
+        serviceKeyConfigured={serviceKeyConfigured}
+        busy={busy}
+        inviteIsStale={inviteIsStale}
+        onAct={act}
+        onIssueTempPassword={issueTempPassword}
+        filtersKey={`${search}|${roleFilter}|${statusFilter}`}
+      />
 
       <AddUserModal
         open={addOpen}

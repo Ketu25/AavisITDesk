@@ -179,9 +179,50 @@
   },
   "constraints": {
     "must": [],
-    "avoid": []
+    "avoid": [
+      "shadcn primitives (would overwrite the project's own button/badge/avatar)",
+      "framer-motion (the project animates with motion/react)",
+      "hue on categorical fields (departments, statuses) \u2014 reserved for the SLA reading",
+      "idle/looping animation \u2014 motion is hover- or entrance-triggered here"
+    ]
   },
-  "decisions": [],
+  "decisions": [
+    {
+      "id": "people-table",
+      "date": "2026-09-18",
+      "area": "admin/people",
+      "choice": "Tabular directory: aligned columns on md+, stacked cards below, 25 per page.",
+      "why": "The previous flex-wrap rows had no column grid, so every control landed at a different x on each row. A table aligns by construction."
+    },
+    {
+      "id": "row-actions-split",
+      "date": "2026-09-18",
+      "area": "admin/people",
+      "choice": "Frequent edits (role, department) stay inline as columns; occasional ones (issue password, disable, re-enable) live in a per-row menu.",
+      "why": "Four buttons and two badges on every row was the bulk of the visual noise, but hiding role and department behind a menu would cost a click on the most common edits."
+    },
+    {
+      "id": "no-shadcn",
+      "date": "2026-09-18",
+      "area": "global",
+      "choice": "21st components are used as design reference and rebuilt on project primitives; shadcn is not installed.",
+      "why": "shadcn init rewrites globals.css tokens, and `add` would overwrite button/badge/avatar, breaking 86 measured call sites that use variant=primary|danger, loading, icon and tone."
+    },
+    {
+      "id": "department-cards",
+      "date": "2026-09-18",
+      "area": "admin/departments",
+      "choice": "Card grid (1/2/3 columns) replacing the divided row list. No glyph or imagery on the card; hover raises a neutral radial bloom in the top-right corner, built from --shimmer.",
+      "why": "A gradient header read as foreign to the theme and reintroduced categorical hue. An oversized monogram that drifted on hover replaced it, but moving a 68px glyph read as a layout wobble. Shading with nothing in motion is what actually sits still."
+    },
+    {
+      "id": "no-framer-motion",
+      "date": "2026-09-18",
+      "area": "global",
+      "choice": "Animation stays on motion@13 via motion/react; framer-motion is not installed.",
+      "why": "Reference components routinely import framer-motion. Adding it would ship a second animation library beside the one lib/motion.ts is built on."
+    }
+  ],
   "evidence": [
     {
       "fact": "components.installed",
