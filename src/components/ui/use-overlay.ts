@@ -93,14 +93,28 @@ export function useScrollLock(active: boolean) {
   }, [active]);
 }
 
-/** Escape closes. Bound to the document so it works wherever focus sits. */
-export function useEscape(active: boolean, onEscape: () => void) {
+/**
+ * Escape closes. Bound to the document so it works wherever focus sits.
+ *
+ * `capture` + `stopPropagation` is how a nested overlay claims the key. A
+ * dropdown inside a dialog owes Escape to the dropdown only, but both listen on
+ * `document`, so ordering by registration does not help — the dialog mounted
+ * first and its bubble-phase listener runs first. Claiming the event on the way
+ * *down* is the only point at which the inner overlay is still ahead.
+ */
+export function useEscape(
+  active: boolean,
+  onEscape: () => void,
+  { capture = false, stopPropagation = false } = {},
+) {
   useEffect(() => {
     if (!active) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onEscape();
+      if (event.key !== "Escape") return;
+      if (stopPropagation) event.stopPropagation();
+      onEscape();
     }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [active, onEscape]);
+    document.addEventListener("keydown", onKeyDown, capture);
+    return () => document.removeEventListener("keydown", onKeyDown, capture);
+  }, [active, onEscape, capture, stopPropagation]);
 }
