@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { apiError, ApiError, requireApiAdmin } from "@/lib/api-auth";
+import { apiError, ApiError, requireApiAdmin, routeUuid } from "@/lib/api-auth";
 import { issueTempPassword } from "@/lib/provisioning";
 import { tempPasswordSchema } from "@/lib/validation";
 
@@ -16,7 +16,7 @@ export async function POST(
 ) {
   try {
     const ctx = await requireApiAdmin();
-    const { id } = await params;
+    const id = routeUuid((await params).id);
 
     if (id === ctx.userId) {
       throw new ApiError(
@@ -25,10 +25,12 @@ export async function POST(
       );
     }
 
-    const body = await request
-      .json()
-      .then((raw) => tempPasswordSchema.parse(raw))
-      .catch(() => ({ password: null as string | null }));
+    // No body at all is the ordinary case and means "generate one". A body
+    // that is present but invalid is a different thing, and catching both
+    // together quietly turned an over-long password into a generated one with
+    // nothing said about it.
+    const raw: unknown = await request.json().catch(() => null);
+    const body = raw === null ? { password: null } : tempPasswordSchema.parse(raw);
 
     const issued = await issueTempPassword(id, body.password);
     return NextResponse.json({ user: issued });

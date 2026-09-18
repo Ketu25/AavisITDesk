@@ -43,6 +43,20 @@ export async function requireApiAdmin(): Promise<AuthContext> {
   return ctx;
 }
 
+const UUID =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * A dynamic segment is whatever was in the URL, so it reaches the handler as
+ * an unvalidated string. Passing a non-UUID down to Postgres raises a 22P02,
+ * which arrives as an opaque 400 quoting the malformed value back — where the
+ * honest answer is simply that no such record exists.
+ */
+export function routeUuid(id: string): string {
+  if (!UUID.test(id)) throw new ApiError(404, "That record does not exist.");
+  return id;
+}
+
 export function apiError(error: unknown): NextResponse {
   if (error instanceof ApiError) {
     return NextResponse.json(
@@ -56,7 +70,19 @@ export function apiError(error: unknown): NextResponse {
       { status: 422 },
     );
   }
-  const message = error instanceof Error ? error.message : "Unexpected server error.";
+  // Everything we actually mean to say is an ApiError above. What is left is
+  // a thrown exception — a Postgres message, a stack, an SDK internal — and
+  // handing that to the browser tells an attacker about the schema while
+  // telling the user nothing. It goes to the log; the caller gets a sentence.
   console.error("[api]", error);
-  return NextResponse.json({ error: message }, { status: 500 });
+  const detail = error instanceof Error ? error.message : "Unexpected server error.";
+  return NextResponse.json(
+    {
+      error:
+        process.env.NODE_ENV === "production"
+          ? "Something went wrong at our end. Please try again."
+          : detail,
+    },
+    { status: 500 },
+  );
 }

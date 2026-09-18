@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { apiError, ApiError, requireApiAdmin } from "@/lib/api-auth";
+import { apiError, ApiError, requireApiAdmin, routeUuid } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { routingRuleSchema } from "@/lib/validation";
@@ -11,7 +11,7 @@ export async function PATCH(
 ) {
   try {
     await requireApiAdmin();
-    const { id } = await params;
+    const id = routeUuid((await params).id);
     const body = routingRuleSchema.partial().parse(await request.json());
 
     const supabase = await createClient();
@@ -35,7 +35,7 @@ export async function DELETE(
 ) {
   try {
     await requireApiAdmin();
-    const { id } = await params;
+    const id = routeUuid((await params).id);
 
     const admin = createAdminClient();
     const { data: rule } = await admin

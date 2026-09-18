@@ -54,6 +54,18 @@ export async function proxy(request: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (!user && !isPublic) {
+    // A fetch() cannot follow a redirect to a sign-in page and make anything
+    // of it: redirects are followed transparently, so the caller gets 200 and
+    // a body of HTML where it expected JSON, and `lib/api.ts` dies on the
+    // first "<". An expired session has to read as 401 to the code that has
+    // to handle it, and only as a redirect to a browser navigating.
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Your session has expired. Sign in again to continue." },
+        { status: 401 },
+      );
+    }
+
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     if (pathname !== "/") url.searchParams.set("next", pathname);

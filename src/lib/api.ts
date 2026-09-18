@@ -15,7 +15,25 @@ export async function api<T = unknown>(
   });
 
   const text = await response.text();
-  const payload = text ? (JSON.parse(text) as Record<string, unknown>) : {};
+
+  // Not every response that reaches here is JSON — a gateway timeout, a
+  // Cloudflare error page, or anything else that answers in HTML would
+  // otherwise throw a bare SyntaxError out of this helper, past every
+  // `instanceof ApiClientError` check in the app, and surface as the generic
+  // "please try again" that tells the user nothing.
+  let payload: Record<string, unknown> = {};
+  if (text) {
+    try {
+      payload = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      throw new ApiClientError(
+        response.ok
+          ? "The server sent a response this app could not read."
+          : `Request failed (${response.status})`,
+        response.status,
+      );
+    }
+  }
 
   if (!response.ok) {
     const message =

@@ -47,7 +47,12 @@ export function LoginForm({
 
     // A disabled account can still authenticate; the server guard signs it
     // straight back out, so let the destination page make that call.
-    router.push(next && next.startsWith("/") ? next : "/dashboard");
+    // A leading "//" is protocol-relative — the browser reads //evil.example
+    // as an absolute URL, so "starts with a slash" is not on its own a test
+    // for "stays on this site".
+    const safeNext =
+      next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+    router.push(safeNext);
     router.refresh();
   }
 

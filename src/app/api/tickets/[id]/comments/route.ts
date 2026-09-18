@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { apiError, ApiError, requireApiUser } from "@/lib/api-auth";
+import { apiError, ApiError, requireApiUser, routeUuid } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { commentSchema } from "@/lib/validation";
 import { throwDbError } from "@/lib/db-error";
@@ -10,7 +10,7 @@ export async function POST(
 ) {
   try {
     const ctx = await requireApiUser();
-    const { id } = await params;
+    const id = routeUuid((await params).id);
     const body = commentSchema.parse(await request.json());
 
     if (body.is_internal && !ctx.isAgent) {

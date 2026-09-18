@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { apiError, requireApiAdmin } from "@/lib/api-auth";
+import { apiError, requireApiAdmin, routeUuid } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { slaRuleSchema } from "@/lib/validation";
 import { throwDbError } from "@/lib/db-error";
@@ -11,7 +11,7 @@ export async function PATCH(
 ) {
   try {
     await requireApiAdmin();
-    const { id } = await params;
+    const id = routeUuid((await params).id);
     const body = slaRuleSchema.partial().parse(await request.json());
 
     const supabase = await createClient();

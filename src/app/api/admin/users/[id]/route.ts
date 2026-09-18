@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { apiError, ApiError, requireApiAdmin } from "@/lib/api-auth";
+import { apiError, ApiError, requireApiAdmin, routeUuid } from "@/lib/api-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { updateUserSchema } from "@/lib/validation";
 import { throwDbError } from "@/lib/db-error";
@@ -14,7 +14,7 @@ export async function PATCH(
 ) {
   try {
     const ctx = await requireApiAdmin();
-    const { id } = await params;
+    const id = routeUuid((await params).id);
     const patch = updateUserSchema.parse(await request.json());
 
     // Guard against an admin locking themselves out of administration.

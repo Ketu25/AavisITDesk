@@ -79,29 +79,12 @@ export const Textarea = forwardRef<HTMLTextAreaElement, React.ComponentProps<"te
   },
 );
 
-export const Select = forwardRef<HTMLSelectElement, React.ComponentProps<"select">>(
-  function Select({ className, children, ...props }, ref) {
-    return (
-      <div className="relative">
-        <select
-          ref={ref}
-          className={cn(CONTROL, "h-11 cursor-pointer appearance-none pr-8 sm:h-9", className)}
-          {...props}
-        >
-          {children}
-        </select>
-        <svg
-          className="pointer-events-none absolute right-2.5 top-1/2 size-3.5 -translate-y-1/2 text-ink-faint"
-          viewBox="0 0 16 16"
-          fill="none"
-          aria-hidden
-        >
-          <path d="m4 6 4 4 4-4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-        </svg>
-      </div>
-    );
-  },
-);
+/**
+ * Re-exported so the seventeen call sites that already import { Select } from
+ * this module keep working. The implementation moved to ./select when it grew
+ * a listbox, a keyboard contract and a portal.
+ */
+export { Select } from "./select";
 
 export function Switch({
   checked,
