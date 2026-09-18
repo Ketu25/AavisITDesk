@@ -1,0 +1,220 @@
+{
+  "version": 1,
+  "project": {
+    "name": "aavis-itdesk",
+    "productType": null,
+    "stack": [
+      "nextjs",
+      "react",
+      "tailwind-v4"
+    ]
+  },
+  "sources": {
+    "tokens": [
+      "src/app/globals.css"
+    ],
+    "components": [
+      "src/components/ui"
+    ],
+    "assets": [],
+    "instructions": [
+      "AGENTS.md",
+      "CLAUDE.md"
+    ]
+  },
+  "design": {
+    "colorMode": "light-and-dark",
+    "colors": {
+      "--ink-muted": {
+        "value": "#8fa0ae",
+        "source": "src/app/globals.css"
+      },
+      "--accent": {
+        "value": "#5b7cfa",
+        "source": "src/app/globals.css"
+      },
+      "--accent-ink": {
+        "value": "#060a12",
+        "source": "src/app/globals.css"
+      },
+      "--accent-soft": {
+        "value": "rgb(91 124 250 / 0.15)",
+        "source": "src/app/globals.css"
+      },
+      "--accent-line": {
+        "value": "rgb(91 124 250 / 0.34)",
+        "source": "src/app/globals.css"
+      },
+      "--color-canvas": {
+        "value": "var(--canvas)",
+        "source": "src/app/globals.css"
+      },
+      "--color-canvas-raised": {
+        "value": "var(--canvas-raised)",
+        "source": "src/app/globals.css"
+      },
+      "--color-surface": {
+        "value": "var(--surface)",
+        "source": "src/app/globals.css"
+      },
+      "--color-surface-hover": {
+        "value": "var(--surface-hover)",
+        "source": "src/app/globals.css"
+      },
+      "--color-surface-sunk": {
+        "value": "var(--surface-sunk)",
+        "source": "src/app/globals.css"
+      },
+      "--color-line": {
+        "value": "var(--line)",
+        "source": "src/app/globals.css"
+      },
+      "--color-line-strong": {
+        "value": "var(--line-strong)",
+        "source": "src/app/globals.css"
+      },
+      "--color-ink": {
+        "value": "var(--ink)",
+        "source": "src/app/globals.css"
+      },
+      "--color-ink-muted": {
+        "value": "var(--ink-muted)",
+        "source": "src/app/globals.css"
+      },
+      "--color-ink-faint": {
+        "value": "var(--ink-faint)",
+        "source": "src/app/globals.css"
+      },
+      "--color-accent": {
+        "value": "var(--accent)",
+        "source": "src/app/globals.css"
+      },
+      "--color-accent-ink": {
+        "value": "var(--accent-ink)",
+        "source": "src/app/globals.css"
+      },
+      "--color-accent-soft": {
+        "value": "var(--accent-soft)",
+        "source": "src/app/globals.css"
+      },
+      "--color-accent-line": {
+        "value": "var(--accent-line)",
+        "source": "src/app/globals.css"
+      },
+      "--color-spec-ok": {
+        "value": "var(--spec-ok)",
+        "source": "src/app/globals.css"
+      },
+      "--color-spec-warn": {
+        "value": "var(--spec-warn)",
+        "source": "src/app/globals.css"
+      },
+      "--color-spec-fail": {
+        "value": "var(--spec-fail)",
+        "source": "src/app/globals.css"
+      }
+    },
+    "typography": {
+      "--font-sans": {
+        "value": "var(--font-plex-sans), ui-sans-serif, system-ui, -apple-system, \"Segoe UI\", sans-serif",
+        "source": "src/app/globals.css"
+      },
+      "--font-mono": {
+        "value": "var(--font-plex-mono), ui-monospace, \"SF Mono\", Menlo, monospace",
+        "source": "src/app/globals.css"
+      }
+    },
+    "spacing": {},
+    "radius": {
+      "--radius-card": {
+        "value": "14px",
+        "source": "src/app/globals.css"
+      }
+    },
+    "shadows": {
+      "--shadow-sm": {
+        "value": "0 1px 2px rgb(0 0 0 / 0.44)",
+        "source": "src/app/globals.css"
+      },
+      "--shadow-md": {
+        "value": "0 8px 24px -8px rgb(0 0 0 / 0.62)",
+        "source": "src/app/globals.css"
+      },
+      "--shadow-lg": {
+        "value": "0 30px 70px -20px rgb(0 0 0 / 0.8)",
+        "source": "src/app/globals.css"
+      }
+    },
+    "motion": {
+      "--ease-standard": {
+        "value": "cubic-bezier(0.2, 0, 0, 1)",
+        "source": "src/app/globals.css"
+      },
+      "--ease-entrance": {
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "source": "src/app/globals.css"
+      },
+      "--ease-exit": {
+        "value": "cubic-bezier(0.4, 0, 1, 1)",
+        "source": "src/app/globals.css"
+      }
+    },
+    "density": "unknown"
+  },
+  "components": {
+    "installed": [
+      "avatar",
+      "badge",
+      "button",
+      "field",
+      "modal",
+      "spinner",
+      "stat",
+      "states",
+      "toast",
+      "use-overlay"
+    ],
+    "preferredPrimitives": [],
+    "patterns": []
+  },
+  "constraints": {
+    "must": [],
+    "avoid": []
+  },
+  "decisions": [],
+  "evidence": [
+    {
+      "fact": "components.installed",
+      "source": "src/components/ui"
+    },
+    {
+      "fact": "design.colorMode:light-and-dark",
+      "source": "src/app/globals.css"
+    },
+    {
+      "fact": "design.tokens",
+      "source": "src/app/globals.css"
+    },
+    {
+      "fact": "project.instructions",
+      "source": "AGENTS.md"
+    },
+    {
+      "fact": "project.instructions",
+      "source": "CLAUDE.md"
+    },
+    {
+      "fact": "project.stack:nextjs",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:react",
+      "source": "package.json"
+    },
+    {
+      "fact": "project.stack:tailwind-v4",
+      "source": "package.json"
+    }
+  ],
+  "generatedAt": "2026-09-15T02:06:11.052Z"
+}
