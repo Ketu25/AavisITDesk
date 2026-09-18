@@ -189,14 +189,19 @@ export default async function DashboardPage() {
 
           {!isAgent && (
             <StaggerChildren className="grid gap-3 sm:grid-cols-3">
-              <Stat label="Open" value={myOpen.length} href="/tickets" />
+              <Stat
+                label="Open"
+                value={myOpen.length}
+                href="/tickets"
+                hint="Still being worked on"
+              />
               <Stat
                 label="Waiting on you"
                 value={awaitingMe.length}
                 tone={awaitingMe.length > 0 ? "fuchsia" : undefined}
                 hint={awaitingMe.length > 0 ? "Needs your reply or confirmation" : "Nothing pending"}
               />
-              <Stat label="Raised in total" value={mine.length} />
+              <Stat label="Raised in total" value={mine.length} hint="Since you joined" />
             </StaggerChildren>
           )}
 
