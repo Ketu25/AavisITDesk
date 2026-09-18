@@ -140,13 +140,31 @@ export async function sendPasswordReset(email: string) {
 /**
  * Ambiguous glyphs are removed on purpose: these get read off a screen, typed
  * by hand, or dictated over a desk, so 0/O and 1/l/I cause real support calls.
- * Three groups of four from a 28-character alphabet is ~57 bits of entropy.
+ * Three groups of four from this 56-character alphabet is ~70 bits of entropy.
  */
 const TEMP_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789abcdefghijkmnpqrstuvwxyz";
 
+/**
+ * Largest multiple of the alphabet that fits in a byte. 256 is not divisible
+ * by 56, so a plain `% 56` would deal the first 32 letters a 5-in-256 chance
+ * against 4-in-256 for the other 24 — a skew worth nothing to an attacker here,
+ * and worth nothing to us either, so it goes.
+ */
+const UNBIASED_LIMIT = 256 - (256 % TEMP_ALPHABET.length);
+
 export function generateTempPassword() {
-  const bytes = randomBytes(12);
-  const chars = Array.from(bytes, (b) => TEMP_ALPHABET[b % TEMP_ALPHABET.length]);
+  const chars: string[] = [];
+
+  // Rejection sampling: bytes at or above the limit are redrawn rather than
+  // folded back over the start of the alphabet.
+  while (chars.length < 12) {
+    for (const byte of randomBytes(12)) {
+      if (byte >= UNBIASED_LIMIT) continue;
+      chars.push(TEMP_ALPHABET[byte % TEMP_ALPHABET.length]);
+      if (chars.length === 12) break;
+    }
+  }
+
   return `${chars.slice(0, 4).join("")}-${chars.slice(4, 8).join("")}-${chars.slice(8, 12).join("")}`;
 }
 

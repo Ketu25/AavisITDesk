@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { apiError, requireApiAdmin } from "@/lib/api-auth";
+import { apiError, requireApiAdmin, routeUuid } from "@/lib/api-auth";
 import { createClient } from "@/lib/supabase/server";
 import { throwDbError } from "@/lib/db-error";
 
@@ -9,7 +9,7 @@ export async function DELETE(
 ) {
   try {
     await requireApiAdmin();
-    const { id } = await params;
+    const id = routeUuid((await params).id);
 
     const supabase = await createClient();
     const { error } = await supabase.from("email_allowlist").delete().eq("id", id);
