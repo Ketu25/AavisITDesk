@@ -26,7 +26,12 @@ export function Stat({
     <div
       data-tone={tone}
       className={cn(
-        "card group relative overflow-hidden p-4",
+        // h-full, because the grid has already done its part. StaggerChildren
+        // wraps each stat in a motion.div, and those wrappers are the grid
+        // items — they stretch to the row height correctly. What did not
+        // happen is the card filling the cell it was given, so a row where
+        // only some stats carry a hint rendered short cards beside a tall one.
+        "card group relative h-full overflow-hidden p-4",
         "transition-[background-color,border-color,box-shadow,transform] duration-200",
         href &&
           "hover:-translate-y-px hover:border-line-strong hover:bg-surface-hover hover:shadow-[var(--shadow-md)]",
@@ -68,7 +73,9 @@ export function Stat({
     <Link
       href={href}
       className={cn(
-        "block rounded-[var(--radius-card)] focus-visible:outline-none",
+        // The link is the middle of that chain when a stat is clickable, so it
+        // has to pass the height through rather than shrink to its content.
+        "block h-full rounded-[var(--radius-card)] focus-visible:outline-none",
         "focus-visible:ring-4 focus-visible:ring-[var(--accent-soft)]",
       )}
     >
