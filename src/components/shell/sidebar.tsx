@@ -104,7 +104,9 @@ export function Sidebar({
   const nav = (scope: Scope) => (
     <>
       <div className="flex items-center justify-between px-3 pb-1 pt-4">
-        <Link href="/dashboard" onClick={close} className="rounded-md">
+        {/* The link is the trace's trigger, not the 26px tile inside it, so
+            the mark also animates when the link takes keyboard focus. */}
+        <Link href="/dashboard" onClick={close} className="aavis-trigger rounded-md">
           <Wordmark />
         </Link>
         <div className="flex items-center gap-0.5">
