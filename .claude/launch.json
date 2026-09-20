@@ -3,8 +3,9 @@
   "configurations": [
     {
       "name": "aavis-itdesk",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "//": "Run through a shell that puts Homebrew's Node first. The default `node` on this machine is /usr/local/bin/node (v16), which Next 16 refuses to start on; Homebrew has v24 at /opt/homebrew/bin. A missing directory in PATH is ignored, so this stays harmless on machines where node is already current.",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "export PATH=\"/opt/homebrew/bin:$PATH\"; exec npm run dev"],
       "port": 3000,
       "autoPort": false
     }

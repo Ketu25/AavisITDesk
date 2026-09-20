@@ -47,3 +47,7 @@ next-env.d.ts
 .wrangler/
 cloudflare-env.d.ts
 .dev.vars
+
+# local agent tooling (vendored skill definitions, not app code)
+.agents/
+.claude/skills/
