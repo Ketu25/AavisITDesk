@@ -84,6 +84,11 @@ export const Icons = {
       <path d="m13.2 13.2 3.1 3.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   ),
+  close: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
+      <path d="m5.8 5.8 8.4 8.4M14.2 5.8l-8.4 8.4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+    </svg>
+  ),
   inbox: ({ className }: IconProps) => (
     <svg viewBox="0 0 20 20" fill="none" className={className ?? base} aria-hidden>
       <path d="M2.8 11.5h3.4l1.1 2h5.4l1.1-2h3.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />

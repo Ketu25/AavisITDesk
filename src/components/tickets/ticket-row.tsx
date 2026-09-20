@@ -5,6 +5,7 @@ import { motion, useReducedMotion } from "motion/react";
 import { PriorityPill, SlaPill, StatusPill } from "./pills";
 import { SlaTrack } from "./sla-instrument";
 import { Avatar } from "@/components/ui/avatar";
+import { Highlight } from "@/components/ui/highlight";
 import { relativeTime } from "@/lib/format";
 import { spring, stagger, transition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -16,18 +17,25 @@ export type TicketRowData = Ticket & {
   assignee: { id: string; full_name: string } | null;
 };
 
+/** A stable empty array, so a row that is not being searched does not hand
+ *  <Highlight> a fresh `terms` identity on every render. */
+const NO_TERMS: string[] = [];
+
 export function TicketRow({
   ticket,
   rules,
   index = 0,
   showAssignee = false,
   showRequester = false,
+  terms = NO_TERMS,
 }: {
   ticket: TicketRowData;
   rules?: Partial<Record<TicketPriority, SlaRule>>;
   index?: number;
   showAssignee?: boolean;
   showRequester?: boolean;
+  /** Folded search terms to mark up in the fields a search can match. */
+  terms?: string[];
 }) {
   const reduced = useReducedMotion();
 
@@ -68,10 +76,12 @@ export function TicketRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span className="readout text-[0.6875rem] text-ink-muted">
-              {ticket.ticket_number}
+              <Highlight text={ticket.ticket_number} terms={terms} />
             </span>
             <span className="text-[0.6875rem] text-ink-faint">·</span>
-            <span className="truncate text-[0.6875rem] text-ink-faint">{ticket.category}</span>
+            <span className="truncate text-[0.6875rem] text-ink-faint">
+              <Highlight text={ticket.category} terms={terms} />
+            </span>
             {ticket.reopen_count > 0 && (
               <span className="tabular rounded bg-surface-sunk px-1.5 text-[0.625rem] font-medium text-ink-muted">
                 reopened ×{ticket.reopen_count}
@@ -79,7 +89,7 @@ export function TicketRow({
             )}
           </div>
           <p className="mt-0.5 truncate text-[0.875rem] font-medium text-ink group-hover:text-ink">
-            {ticket.subject}
+            <Highlight text={ticket.subject} terms={terms} />
           </p>
           <div className="mt-1 flex items-center gap-2 text-[0.75rem] text-ink-faint">
             {showRequester && ticket.creator && (
