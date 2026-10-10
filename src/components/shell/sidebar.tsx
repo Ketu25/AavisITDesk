@@ -8,6 +8,7 @@ import { Wordmark } from "./logo";
 import { Icons } from "./icons";
 import { ThemeToggle } from "./theme-toggle";
 import { MOBILE_NAV_ID, useMobileNav } from "./mobile-nav";
+import { CommandPaletteTrigger } from "./command-palette";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useEscape, useFocusTrap, useScrollLock } from "@/components/ui/use-overlay";
@@ -134,7 +135,7 @@ export function Sidebar({
         </div>
       </div>
 
-      <div className="px-3 py-3">
+      <div className="space-y-2 px-3 py-3">
         <motion.div whileTap={{ scale: 0.98 }} transition={spring.snappy}>
           <Link
             href="/tickets/new"
@@ -149,6 +150,9 @@ export function Sidebar({
             New ticket
           </Link>
         </motion.div>
+        {/* In the drawer, the drawer steps aside first so the palette is not
+            opened underneath it. */}
+        <CommandPaletteTrigger onOpen={close} />
       </div>
 
       <nav className="flex-1 space-y-5 overflow-y-auto px-2 pb-4">

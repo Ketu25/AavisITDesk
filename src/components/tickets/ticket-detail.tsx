@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
@@ -9,7 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Field, Select, Textarea } from "@/components/ui/field";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Celebration } from "@/components/ui/celebration";
 import { useToast } from "@/components/ui/toast";
+import { TimeAgo } from "@/components/ui/time-ago";
 import { Icons } from "@/components/shell/icons";
 import { PriorityPill, StatusPill } from "./pills";
 import { SlaDial } from "./sla-instrument";
@@ -21,7 +23,6 @@ import {
 import { api, ApiClientError } from "@/lib/api";
 import { AGENT_NEXT_STATUS, PRIORITY_META, STATUS_META } from "@/lib/constants";
 import { indexRules } from "@/lib/sla";
-import { absoluteTime, relativeTime } from "@/lib/format";
 import { TICKET_PRIORITIES, type SlaRule, type TicketPriority, type TicketStatus } from "@/lib/database.types";
 import { cn } from "@/lib/utils";
 import type { TicketRowData } from "./ticket-row";
@@ -49,6 +50,14 @@ export function TicketDetail({
   const [message, setMessage] = useState("");
   const [internal, setInternal] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  const [celebrating, setCelebrating] = useState(false);
+
+  // The burst is a moment, not a state: it clears itself.
+  useEffect(() => {
+    if (!celebrating) return;
+    const timer = setTimeout(() => setCelebrating(false), 1600);
+    return () => clearTimeout(timer);
+  }, [celebrating]);
 
   const ruleIndex = useMemo(() => indexRules(rules), [rules]);
   const names = useMemo(() => {
@@ -59,20 +68,34 @@ export function TicketDetail({
     return map;
   }, [agents, ticket.assignee, ticket.creator]);
 
+  /** True when the change went through. */
   async function mutate(label: string, patch: Record<string, unknown>) {
     setBusy(label);
     try {
       await api(`/api/tickets/${ticket.id}`, { method: "PATCH", json: patch });
       router.refresh();
+      return true;
     } catch (error) {
       push({
         tone: "error",
         title: "Update failed",
         description: error instanceof ApiClientError ? error.message : "Please try again.",
       });
+      return false;
     } finally {
       setBusy(null);
     }
+  }
+
+  /** The requester saying the fix worked — the happy ending, so it gets one. */
+  async function confirmFixed() {
+    if (!(await mutate("closed", { status: "closed" }))) return;
+    setCelebrating(true);
+    push({
+      tone: "success",
+      title: "Ticket closed",
+      description: "Thanks for confirming the fix.",
+    });
   }
 
   async function postComment(event: React.FormEvent) {
@@ -160,9 +183,7 @@ export function TicketDetail({
               </p>
               <p className="mt-4 border-t border-line pt-3 text-[0.75rem] text-ink-faint">
                 Raised by {ticket.creator?.full_name ?? "—"} ·{" "}
-                <span title={absoluteTime(ticket.created_at)}>
-                  {relativeTime(ticket.created_at)}
-                </span>
+                <TimeAgo value={ticket.created_at} />
               </p>
             </motion.div>
 
@@ -185,7 +206,8 @@ export function TicketDetail({
                     size="sm"
                     icon={<Icons.check />}
                     loading={busy === "closed"}
-                    onClick={() => mutate("closed", { status: "closed" })}
+                    disabled={busy !== null}
+                    onClick={confirmFixed}
                   >
                     Yes, close it
                   </Button>
@@ -194,6 +216,7 @@ export function TicketDetail({
                     size="sm"
                     icon={<Icons.refresh />}
                     loading={busy === "reopened"}
+                    disabled={busy !== null}
                     onClick={() => mutate("reopened", { status: "reopened" })}
                   >
                     No, reopen
@@ -317,22 +340,16 @@ export function TicketDetail({
                   )}
                 </Row>
                 <Row label="Opened">
-                  <span title={absoluteTime(ticket.created_at)}>
-                    {relativeTime(ticket.created_at)}
-                  </span>
+                  <TimeAgo value={ticket.created_at} />
                 </Row>
                 {ticket.first_response_at && (
                   <Row label="First reply">
-                    <span title={absoluteTime(ticket.first_response_at)}>
-                      {relativeTime(ticket.first_response_at)}
-                    </span>
+                    <TimeAgo value={ticket.first_response_at} />
                   </Row>
                 )}
                 {ticket.resolved_at && (
                   <Row label="Resolved">
-                    <span title={absoluteTime(ticket.resolved_at)}>
-                      {relativeTime(ticket.resolved_at)}
-                    </span>
+                    <TimeAgo value={ticket.resolved_at} />
                   </Row>
                 )}
               </dl>
@@ -410,6 +427,8 @@ export function TicketDetail({
           </aside>
         </div>
       </PageBody>
+
+      <Celebration show={celebrating} />
     </>
   );
 }

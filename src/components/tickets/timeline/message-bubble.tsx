@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { Avatar } from "@/components/ui/avatar";
 import { RAIL } from "./rail";
-import { absoluteTime, relativeTime } from "@/lib/format";
+import { TimeAgo } from "@/components/ui/time-ago";
 import { spring } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { CommentWithAuthor } from "./types";
@@ -64,13 +64,10 @@ export function MessageBubble({
               <span className="text-[0.75rem] font-medium text-ink">
                 {own ? "You" : name}
               </span>
-              <time
-                dateTime={comment.created_at}
-                title={absoluteTime(comment.created_at)}
+              <TimeAgo
+                value={comment.created_at}
                 className="readout text-[0.625rem] text-ink-faint"
-              >
-                {relativeTime(comment.created_at)}
-              </time>
+              />
               {internal && (
                 <span
                   className="eyebrow"
