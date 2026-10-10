@@ -4,6 +4,9 @@ import { Sidebar, type NavCounts } from "@/components/shell/sidebar";
 import { AppBackdrop } from "@/components/shell/app-backdrop";
 import { RealtimeRefresh } from "@/components/shell/realtime-refresh";
 import { MobileNavProvider } from "@/components/shell/mobile-nav";
+import { CommandPaletteProvider } from "@/components/shell/command-palette";
+import { LiveNotices } from "@/components/shell/live-notices";
+import { TimeZoneSync } from "@/components/shell/time-zone-sync";
 import { RouteTransition } from "@/components/motion";
 import { OPEN_STATUSES } from "@/lib/constants";
 
@@ -43,16 +46,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <MobileNavProvider>
-      <div className="flex min-h-dvh">
-        <Sidebar
-          profile={profile}
-          departmentName={departmentResult.data?.name ?? null}
-          counts={counts}
-        />
-        <AppBackdrop alert={counts.breached} />
-        <RouteTransition className="flex min-w-0 flex-1 flex-col">{children}</RouteTransition>
-        <RealtimeRefresh />
-      </div>
+      <CommandPaletteProvider role={profile.role}>
+        <div className="flex min-h-dvh">
+          <Sidebar
+            profile={profile}
+            departmentName={departmentResult.data?.name ?? null}
+            counts={counts}
+          />
+          <AppBackdrop alert={counts.breached} />
+          <RouteTransition className="flex min-w-0 flex-1 flex-col">{children}</RouteTransition>
+          <RealtimeRefresh />
+          <LiveNotices viewerId={profile.id} />
+          <TimeZoneSync />
+        </div>
+      </CommandPaletteProvider>
     </MobileNavProvider>
   );
 }

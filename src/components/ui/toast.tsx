@@ -1,11 +1,23 @@
 "use client";
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { cn } from "@/lib/utils";
 
 type ToastTone = "success" | "error" | "info";
-type Toast = { id: number; title: string; description?: string; tone: ToastTone };
+type Toast = {
+  id: number;
+  title: string;
+  description?: string;
+  tone: ToastTone;
+  /** Somewhere to go about it — a live update links to its ticket. */
+  action?: { label: string; href: string };
+  /** Milliseconds on screen. Something worth acting on can stay longer. */
+  duration?: number;
+};
+
+const DEFAULT_DURATION = 5000;
 
 const ToastContext = createContext<{
   push: (t: Omit<Toast, "id">) => void;
@@ -43,7 +55,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const push = useCallback((toast: Omit<Toast, "id">) => {
     const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { ...toast, id }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 5000);
+    setTimeout(
+      () => setToasts((prev) => prev.filter((t) => t.id !== id)),
+      toast.duration ?? DEFAULT_DURATION,
+    );
   }, []);
 
   const value = useMemo(() => ({ push }), [push]);
@@ -79,6 +94,15 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
                   <p className="mt-0.5 text-xs leading-relaxed text-ink-muted">
                     {toast.description}
                   </p>
+                )}
+                {toast.action && (
+                  <Link
+                    href={toast.action.href}
+                    onClick={() => setToasts((p) => p.filter((t) => t.id !== toast.id))}
+                    className="mt-1.5 inline-flex text-xs font-medium text-accent underline-offset-4 hover:underline"
+                  >
+                    {toast.action.label}
+                  </Link>
                 )}
               </div>
               <button

@@ -3,7 +3,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { RAIL, RailMarker } from "./rail";
 import { describeEvent, eventTone } from "./describe-event";
-import { absoluteTime, relativeTime } from "@/lib/format";
+import { TimeAgo } from "@/components/ui/time-ago";
 import { transition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { EventWithActor } from "./types";
@@ -34,13 +34,7 @@ export function EventNode({
       <RailMarker tone={tone} className="top-[0.85rem]" />
       <div className="flex items-baseline gap-3 text-[0.75rem] leading-relaxed text-ink-faint">
         <span className="min-w-0 flex-1">{describeEvent(event, names)}</span>
-        <time
-          dateTime={event.created_at}
-          title={absoluteTime(event.created_at)}
-          className="readout flex-none text-[0.6875rem]"
-        >
-          {relativeTime(event.created_at)}
-        </time>
+        <TimeAgo value={event.created_at} className="readout flex-none text-[0.6875rem]" />
       </div>
     </motion.li>
   );

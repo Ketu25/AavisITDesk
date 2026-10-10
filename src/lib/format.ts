@@ -10,10 +10,10 @@ const UNITS: [limit: number, divisor: number, unit: Intl.RelativeTimeFormatUnit]
 
 const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
 
-export function relativeTime(value: string | Date | null | undefined) {
+export function relativeTime(value: string | Date | null | undefined, now: number = Date.now()) {
   if (!value) return "—";
   const date = typeof value === "string" ? new Date(value) : value;
-  const seconds = (date.getTime() - Date.now()) / 1000;
+  const seconds = (date.getTime() - now) / 1000;
   const abs = Math.abs(seconds);
   for (const [limit, divisor, unit] of UNITS) {
     if (abs < limit) return rtf.format(Math.round(seconds / divisor), unit);

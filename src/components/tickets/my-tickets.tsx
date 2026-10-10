@@ -164,8 +164,9 @@ export function MyTickets({
     inputRef.current?.select();
   }, []);
 
-  // `/` to search and ⌘K / Ctrl-K to search, the two things every list in every
-  // tool has taught people to try.
+  // `/` to search, the thing every list in every tool has taught people to
+  // try. ⌘K / Ctrl-K is the app-wide jump box now, on this page as on every
+  // other, so it is not claimed here.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       // A dialog owns the keyboard while it is open.
@@ -176,11 +177,6 @@ export function MyTickets({
         !!target &&
         (target.isContentEditable || /^(input|textarea|select)$/i.test(target.tagName));
 
-      if ((event.key === "k" || event.key === "K") && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        focusSearch();
-        return;
-      }
       if (
         event.key === "/" &&
         !typingElsewhere &&

@@ -6,7 +6,7 @@ import { PriorityPill, SlaPill, StatusPill } from "./pills";
 import { SlaTrack } from "./sla-instrument";
 import { Avatar } from "@/components/ui/avatar";
 import { Highlight } from "@/components/ui/highlight";
-import { relativeTime } from "@/lib/format";
+import { TimeAgo } from "@/components/ui/time-ago";
 import { spring, stagger, transition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { SlaRule, Ticket, TicketPriority } from "@/lib/database.types";
@@ -105,9 +105,7 @@ export function TicketRow({
                 <span>·</span>
               </>
             )}
-            <span title={new Date(ticket.created_at).toLocaleString()}>
-              {relativeTime(ticket.created_at)}
-            </span>
+            <TimeAgo value={ticket.created_at} />
           </div>
         </div>
 

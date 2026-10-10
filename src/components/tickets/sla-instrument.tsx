@@ -20,6 +20,12 @@ type Props = {
   className?: string;
 };
 
+type DialProps = Props & {
+  /** `sm` is the same instrument at card scale: a smaller face and type, so
+   *  the reading still fits inside the arc. */
+  size?: "md" | "sm";
+};
+
 /** Maps an SLA state onto a measurement colour. */
 const SPEC_COLOR: Record<string, string> = {
   on_track: "var(--spec-ok)",
@@ -55,7 +61,7 @@ function pointOnArc(fraction: number, radius = R) {
  * measured against a target, with a warning band before the limit. The dial
  * ticks every second so a ticket nearing breach visibly moves.
  */
-export function SlaDial({ ticket, rules, className }: Props) {
+export function SlaDial({ ticket, rules, className, size = "md" }: DialProps) {
   const sla = useSla(ticket, rules, 1000);
   const reduced = useReducedMotion();
   const isClient = useIsClient();
@@ -75,7 +81,13 @@ export function SlaDial({ ticket, rules, className }: Props) {
   const overdue = sla.remainingMs < 0;
 
   return (
-    <div className={cn("relative mx-auto w-full max-w-[10.5rem]", className)}>
+    <div
+      className={cn(
+        "relative mx-auto w-full",
+        size === "sm" ? "max-w-[6.75rem]" : "max-w-[10.5rem]",
+        className,
+      )}
+    >
       <svg viewBox="0 0 120 120" className="block w-full" role="img"
            aria-label={`SLA ${meta.label}, ${formatDuration(sla.remainingMs)} ${overdue ? "over" : "remaining"}`}>
         {/* In-spec zone, then the warning band before the limit. */}
@@ -127,11 +139,22 @@ export function SlaDial({ ticket, rules, className }: Props) {
       {/* Centred against the dial itself rather than nudged with a margin, so
           the readout stays put at any width. */}
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="readout text-xl font-semibold leading-none" style={{ color }}>
+        <span
+          className={cn(
+            "readout font-semibold leading-none",
+            size === "sm" ? "text-[0.875rem]" : "text-xl",
+          )}
+          style={{ color }}
+        >
           {isClient ? formatDuration(sla.remainingMs) : "—"}
         </span>
-        <span className="eyebrow mt-1.5">{overdue ? "over target" : "remaining"}</span>
-        <span className="mt-2 text-[0.75rem] font-medium" style={{ color }}>
+        <span className={cn("eyebrow", size === "sm" ? "mt-1 text-[0.5rem]" : "mt-1.5")}>
+          {overdue ? "over target" : "remaining"}
+        </span>
+        <span
+          className={cn("font-medium", size === "sm" ? "mt-1 text-[0.625rem]" : "mt-2 text-[0.75rem]")}
+          style={{ color }}
+        >
           {meta.label}
         </span>
       </div>
