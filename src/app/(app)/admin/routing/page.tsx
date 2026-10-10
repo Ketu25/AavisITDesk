@@ -11,7 +11,7 @@ export default async function AdminRoutingPage() {
   const supabase = await createClient();
 
   const [{ data: rules }, { data: agents }, { data: settings }] = await Promise.all([
-    supabase.from("routing_rules").select("*").order("sort_order"),
+    supabase.from("routing_rules").select("*").order("sort_order").order("category"),
     supabase
       .from("profiles")
       .select("id, full_name")
@@ -25,7 +25,7 @@ export default async function AdminRoutingPage() {
     <>
       <PageHeader
         title="Routing rules"
-        description="These categories are the dropdown on the new-ticket form, and they decide the default owner."
+        description="These categories are the choices on the new-ticket form, in this order, and they decide the default owner."
       />
       <PageBody className="max-w-4xl">
         <RoutingAdmin

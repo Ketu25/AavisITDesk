@@ -32,7 +32,12 @@ export default async function QueuePage({
         .eq("status", "active")
         .order("full_name"),
       supabase.from("sla_rules").select("*"),
-      supabase.from("routing_rules").select("category").eq("is_active", true).order("sort_order"),
+      supabase
+        .from("routing_rules")
+        .select("category")
+        .eq("is_active", true)
+        .order("sort_order")
+        .order("category"),
     ]);
 
   return (

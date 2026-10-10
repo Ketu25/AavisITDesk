@@ -69,6 +69,14 @@ export const routingRuleSchema = z.object({
   sort_order: z.number().int().optional(),
 });
 
+/** The whole category list, top to bottom — never a partial move. */
+export const routingOrderSchema = z.object({
+  ids: z
+    .array(z.string().uuid())
+    .max(500)
+    .refine((ids) => new Set(ids).size === ids.length, "Each category can appear only once."),
+});
+
 export const settingsSchema = z.object({
   allowed_email_domains: z.array(z.string().trim().toLowerCase()).optional(),
   invite_expiry_hours: z.number().int().min(1).max(720).optional(),

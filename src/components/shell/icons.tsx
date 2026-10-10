@@ -78,6 +78,26 @@ export const Icons = {
       <circle cx="15.5" cy="10" r="1.5" />
     </svg>
   ),
+  grip: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="currentColor" className={className ?? "size-4 flex-none"} aria-hidden>
+      <circle cx="7.5" cy="5" r="1.4" />
+      <circle cx="12.5" cy="5" r="1.4" />
+      <circle cx="7.5" cy="10" r="1.4" />
+      <circle cx="12.5" cy="10" r="1.4" />
+      <circle cx="7.5" cy="15" r="1.4" />
+      <circle cx="12.5" cy="15" r="1.4" />
+    </svg>
+  ),
+  chevronUp: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
+      <path d="m5.5 12.2 4.5-4.5 4.5 4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  chevronDown: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
+      <path d="m5.5 7.8 4.5 4.5 4.5-4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
   search: ({ className }: IconProps) => (
     <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
       <circle cx="9" cy="9" r="5.4" stroke="currentColor" strokeWidth="1.6" />
