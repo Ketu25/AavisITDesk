@@ -18,6 +18,9 @@ export const STATUS_META: Record<TicketStatus, Meta> = {
   reopened:        { label: "Reopened",    tone: "rose" },
 };
 
+/** Longest SLA an admin can set. The API enforces it; the SLA screen explains it. */
+export const SLA_MAX_MINUTES = 60 * 24 * 90;
+
 export const PRIORITY_META: Record<TicketPriority, Meta & { rank: number }> = {
   urgent: { label: "Urgent", tone: "rose",   rank: 0 },
   high:   { label: "High",   tone: "orange", rank: 1 },

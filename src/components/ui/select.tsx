@@ -329,6 +329,8 @@ export const Select = forwardRef<
             aria-expanded={open}
             aria-controls={open ? listId : undefined}
             aria-haspopup="listbox"
+            aria-label={props["aria-label"]}
+            aria-labelledby={props["aria-labelledby"]}
             aria-activedescendant={
               open && activeIndex >= 0 ? `${listId}-${activeIndex}` : undefined
             }

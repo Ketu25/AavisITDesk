@@ -120,6 +120,12 @@ export const Icons = {
       <path d="m4.5 10.4 3.4 3.4 7.6-7.6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  pause: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? base} aria-hidden>
+      <circle cx="10" cy="10" r="7.2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8.3 7.5v5M11.7 7.5v5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  ),
   refresh: ({ className }: IconProps) => (
     <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
       <path d="M16.2 8.6A6.4 6.4 0 0 0 5.1 5.8M3.8 11.4a6.4 6.4 0 0 0 11.1 2.8" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TICKET_PRIORITIES, TICKET_STATUSES, USER_ROLES } from "@/lib/database.types";
+import { SLA_MAX_MINUTES } from "@/lib/constants";
 
 export const createTicketSchema = z.object({
   subject: z.string().trim().min(3, "Give the ticket a short title.").max(160),
@@ -55,7 +56,7 @@ export const departmentSchema = z.object({
 
 export const slaRuleSchema = z.object({
   priority: z.enum(TICKET_PRIORITIES),
-  duration_minutes: z.number().int().min(1).max(60 * 24 * 90),
+  duration_minutes: z.number().int().min(1).max(SLA_MAX_MINUTES),
   at_risk_threshold_pct: z.number().int().min(1).max(99),
 });
 

@@ -47,12 +47,17 @@ export function Field({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -3 }}
             transition={{ duration: 0.15 }}
+            id={htmlFor ? `${htmlFor}-message` : undefined}
             className="text-xs text-[#e11d48] dark:text-[#fb7185]"
           >
             {error}
           </motion.p>
         ) : hint ? (
-          <p key="hint" className="text-xs text-ink-faint">
+          <p
+            key="hint"
+            id={htmlFor ? `${htmlFor}-message` : undefined}
+            className="text-xs text-ink-faint"
+          >
             {hint}
           </p>
         ) : null}
