@@ -324,6 +324,7 @@ export type Database = {
       is_agent: { Args: never; Returns: boolean };
       is_email_allowed: { Args: { p_email: string }; Returns: boolean };
       report_summary: { Args: { p_from?: string; p_to?: string }; Returns: Json };
+      reorder_routing_rules: { Args: { p_ids: string[] }; Returns: undefined };
       reset_invite_state: { Args: { p_user_id: string }; Returns: boolean };
       temp_password_is_valid: { Args: { p_user_id: string }; Returns: boolean };
       stamp_temp_password: { Args: { p_user_id: string; p_expires: string }; Returns: undefined };

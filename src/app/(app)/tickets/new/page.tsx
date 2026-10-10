@@ -15,7 +15,8 @@ export default async function NewTicketPage() {
       .from("routing_rules")
       .select("category, description, default_priority")
       .eq("is_active", true)
-      .order("sort_order"),
+      .order("sort_order")
+      .order("category"),
     profile.department_id
       ? supabase.from("departments").select("name").eq("id", profile.department_id).maybeSingle()
       : Promise.resolve({ data: null }),
