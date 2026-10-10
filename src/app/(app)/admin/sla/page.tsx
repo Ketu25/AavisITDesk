@@ -10,12 +10,9 @@ export default async function AdminSlaPage() {
   await requireAdmin();
   const supabase = await createClient();
 
+  // Ordered by urgency in the component, which also accounts for a priority
+  // that has no row at all.
   const { data: rules } = await supabase.from("sla_rules").select("*");
-
-  const ordered = ["urgent", "high", "normal", "low"];
-  const sorted = (rules ?? []).sort(
-    (a, b) => ordered.indexOf(a.priority) - ordered.indexOf(b.priority),
-  );
 
   return (
     <>
@@ -23,8 +20,8 @@ export default async function AdminSlaPage() {
         title="SLA rules"
         description="Target resolution time per priority. Applied to new tickets the moment you save."
       />
-      <PageBody className="max-w-3xl">
-        <SlaAdmin rules={sorted} />
+      <PageBody className="max-w-6xl">
+        <SlaAdmin rules={rules ?? []} />
       </PageBody>
     </>
   );

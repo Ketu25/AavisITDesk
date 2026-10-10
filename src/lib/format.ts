@@ -33,6 +33,20 @@ export function absoluteTime(value: string | Date | null | undefined) {
   });
 }
 
+/**
+ * Every non-zero part: 1d 30m, 2h 15m, 45m. For a value being set rather than
+ * glanced at — the compact form drops the minutes from "1d 0h 30m", which on
+ * a target someone is editing would misstate what gets saved.
+ */
+export function minutesToExact(minutes: number) {
+  const total = Math.max(0, Math.round(minutes));
+  const d = Math.floor(total / 1440);
+  const h = Math.floor((total % 1440) / 60);
+  const m = total % 60;
+  const parts = [d && `${d}d`, h && `${h}h`, m && `${m}m`].filter(Boolean);
+  return parts.length ? parts.join(" ") : "0m";
+}
+
 /** Compact duration: 2d 4h, 3h 20m, 45m, 30s. */
 export function duration(ms: number) {
   const abs = Math.abs(ms);
