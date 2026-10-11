@@ -93,7 +93,7 @@ export function PeopleTable({
           title="Nobody matches"
           description={
             total === 0
-              ? "Invite someone, or import a list of people from CSV."
+              ? "Invite someone, or bulk import a list of people from Excel or CSV."
               : "Adjust the filters, or invite someone new."
           }
         />

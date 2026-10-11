@@ -180,7 +180,7 @@ export function UsersAdmin({
           disabled={!serviceKeyConfigured}
           onClick={() => setImportOpen(true)}
         >
-          Import CSV
+          Bulk import
         </Button>
         <Button
           size="sm"
@@ -233,12 +233,13 @@ export function UsersAdmin({
       <Modal
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        title="Bulk import from CSV"
-        description="Columns: email, name, department, role. Everyone gets an invite email — no passwords are ever sent."
+        title="Bulk import people"
+        description="Add a whole team in one pass. Each person gets a temporary password to hand over — nothing is emailed."
         size="lg"
       >
         <CsvImport
           departments={departments}
+          allowedDomains={allowedDomains}
           onDone={() => {
             router.refresh();
           }}

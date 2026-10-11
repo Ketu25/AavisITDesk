@@ -132,6 +132,12 @@ export const Icons = {
       <path d="M16.5 4.6v4h-4M3.5 15.4v-4h4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  download: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
+      <path d="M10 3.6v8.6M6.4 8.8 10 12.4l3.6-3.6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 15.6h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  ),
   alert: ({ className }: IconProps) => (
     <svg viewBox="0 0 20 20" fill="none" className={className ?? base} aria-hidden>
       <path d="M10 7.2v3.4m0 2.6h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
