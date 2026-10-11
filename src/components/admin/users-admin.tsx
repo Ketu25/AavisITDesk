@@ -1,14 +1,15 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Field, Input, Select } from "@/components/ui/field";
 import { Modal } from "@/components/ui/modal";
+import { Spinner } from "@/components/ui/spinner";
 import { useToast } from "@/components/ui/toast";
 import { Icons } from "@/components/shell/icons";
 import { PeopleTable } from "./people-table";
-import { CsvImport } from "./csv-import";
 import { CredentialsPanel, type IssuedCredential } from "./credentials-panel";
 import { api, ApiClientError } from "@/lib/api";
 import { ROLE_META } from "@/lib/constants";
@@ -16,6 +17,21 @@ import { USER_ROLES, type Profile, type UserRole } from "@/lib/database.types";
 import { StaggerChildren } from "@/components/motion";
 
 type Department = { id: string; name: string };
+
+/**
+ * Browser-only: the dialog only renders once opened, and keeping it out of the
+ * server render keeps ExcelJS out of the Worker bundle, where it would never
+ * run but added about 370 KB (gzipped) to every deploy and cold start.
+ */
+const CsvImport = dynamic(() => import("./csv-import").then((m) => m.CsvImport), {
+  ssr: false,
+  loading: () => (
+    <p className="flex items-center justify-center gap-2 py-10 text-[0.8125rem] text-ink-muted">
+      <Spinner className="size-3.5" />
+      Loading…
+    </p>
+  ),
+});
 
 export function UsersAdmin({
   users,
@@ -180,7 +196,7 @@ export function UsersAdmin({
           disabled={!serviceKeyConfigured}
           onClick={() => setImportOpen(true)}
         >
-          Import CSV
+          Bulk import
         </Button>
         <Button
           size="sm"
@@ -233,12 +249,13 @@ export function UsersAdmin({
       <Modal
         open={importOpen}
         onClose={() => setImportOpen(false)}
-        title="Bulk import from CSV"
-        description="Columns: email, name, department, role. Everyone gets an invite email — no passwords are ever sent."
+        title="Bulk import people"
+        description="Add a whole team in one pass. Each person gets a temporary password to hand over — nothing is emailed."
         size="lg"
       >
         <CsvImport
           departments={departments}
+          allowedDomains={allowedDomains}
           onDone={() => {
             router.refresh();
           }}

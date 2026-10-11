@@ -6,6 +6,7 @@ import { createClient as createPublicClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ApiError } from "@/lib/api-auth";
 import type { UserRole } from "@/lib/database.types";
+import { departmentKey } from "@/lib/people-import";
 
 export type InviteInput = {
   email: string;
@@ -68,6 +69,19 @@ export async function resolveDepartment(nameOrId: string | null | undefined) {
     throw new ApiError(422, `There is no department called "${value}".`);
   }
   return data.id;
+}
+
+/**
+ * Active departments keyed by their matching form, so a whole import resolves
+ * in one query and with an exact comparison — `ilike` would read `_` and `%`
+ * in a department name as wildcards.
+ */
+export async function activeDepartmentIds() {
+  const admin = createAdminClient();
+  const { data, error } = await admin.from("departments").select("id, name").eq("is_active", true);
+
+  if (error) throw new ApiError(500, `Could not load departments: ${error.message}`);
+  return new Map((data ?? []).map((d) => [departmentKey(d.name), d.id]));
 }
 
 export async function inviteUser(input: InviteInput, invitedBy: string) {

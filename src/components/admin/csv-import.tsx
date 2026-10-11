@@ -1,17 +1,25 @@
 "use client";
 
-import { useRef, useState } from "react";
-import Papa from "papaparse";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/toast";
+import { Icons } from "@/components/shell/icons";
 import { api, ApiClientError } from "@/lib/api";
 import { USER_ROLES } from "@/lib/database.types";
+import { departmentKey, MAX_IMPORT_ROWS, type ImportOptions } from "@/lib/people-import";
+import {
+  buildTemplate,
+  isSampleRow,
+  readPeopleFile,
+  saveFile,
+  TEMPLATE_FILE_NAME,
+  type PersonRow,
+} from "./import-file";
 import { CredentialsPanel } from "./credentials-panel";
 import { cn } from "@/lib/utils";
 
-type Row = Record<string, string | null>;
 type Result = {
   email: string;
   status: "created" | "failed";
@@ -20,98 +28,138 @@ type Result = {
   message?: string;
 };
 
-const TEMPLATE = `email,name,department,role
-priya.sharma@aavispharma.com,Priya Sharma,QA,user
-sam.oduya@aavispharma.com,Sam Oduya,IT,agent
-dana.reyes@aavispharma.com,Dana Reyes,Finance,user`;
-
-/** Header aliases people actually use in exported spreadsheets. */
-const HEADER_MAP: Record<string, string> = {
-  email: "email",
-  "email address": "email",
-  "e-mail": "email",
-  mail: "email",
-  name: "name",
-  "full name": "name",
-  fullname: "name",
-  "display name": "name",
-  department: "department",
-  dept: "department",
-  team: "department",
-  role: "role",
-  "access level": "role",
-};
-
 export function CsvImport({
   departments,
+  allowedDomains,
   onDone,
 }: {
   departments: { id: string; name: string }[];
+  allowedDomains: string[];
   onDone: () => void;
 }) {
   const { push } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [rows, setRows] = useState<Row[]>([]);
+  // Seeded from the page, then replaced by a live read when the dialog opens,
+  // when the template is downloaded, and when a file is chosen.
+  const [options, setOptions] = useState<ImportOptions>(() => ({
+    departments,
+    allowedDomains,
+    roles: USER_ROLES,
+  }));
+  const optionsRequest = useRef(0);
+  const readingRef = useRef(false);
+
+  const [rows, setRows] = useState<PersonRow[]>([]);
   const [fileName, setFileName] = useState<string | null>(null);
   const [parseError, setParseError] = useState<string | null>(null);
   const [results, setResults] = useState<Result[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [reading, setReading] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const [dragging, setDragging] = useState(false);
 
-  const departmentNames = new Set(departments.map((d) => d.name.toLowerCase()));
+  const departmentKeys = new Set(options.departments.map((d) => departmentKey(d.name)));
   const activationUrl =
     typeof window === "undefined" ? "/activate" : `${window.location.origin}/activate`;
 
-  function ingest(text: string, name: string) {
+  /** Reads what is live right now; when reads overlap, only the newest lands. */
+  const loadOptions = useCallback(async () => {
+    const request = ++optionsRequest.current;
+    const live = await api<ImportOptions>("/api/admin/users/import", { cache: "no-store" });
+    if (request === optionsRequest.current) setOptions(live);
+    return live;
+  }, []);
+
+  useEffect(() => {
+    // A failure keeps the page's copy; the server checks every row regardless.
+    loadOptions().catch(() => {});
+  }, [loadOptions]);
+
+  async function readFile(file: File) {
+    // One file at a time: a second drop mid-read would race the first.
+    if (readingRef.current) return;
+    readingRef.current = true;
+    setReading(true);
     setParseError(null);
     setResults(null);
 
-    const parsed = Papa.parse<Row>(text, {
-      header: true,
-      skipEmptyLines: "greedy",
-      transformHeader: (header) => HEADER_MAP[header.trim().toLowerCase()] ?? header.trim().toLowerCase(),
-    });
+    try {
+      // Validate against what is live now, not what was live when the page loaded.
+      const [table] = await Promise.all([readPeopleFile(file), loadOptions().catch(() => {})]);
 
-    if (parsed.errors.length > 0 && parsed.data.length === 0) {
-      setParseError(parsed.errors[0].message);
-      return;
+      if (typeof table === "string") {
+        setParseError(table);
+        return;
+      }
+      if (!table.fields.includes("email")) {
+        setParseError(
+          "The header row needs an email column. Download the template and keep its header row as it is.",
+        );
+        return;
+      }
+
+      // A row with a name but no email is kept, so it is flagged below rather
+      // than silently left out of the import.
+      const people = table.rows.filter((row) => Object.values(row).some(Boolean));
+
+      if (people.length === 0) {
+        setParseError("That file has a header row but no people yet. Add one row per person under it.");
+        return;
+      }
+      if (people.length > MAX_IMPORT_ROWS) {
+        setParseError(`That file has ${people.length} rows; the limit is ${MAX_IMPORT_ROWS} per import.`);
+        return;
+      }
+
+      setRows(people);
+      setFileName(file.name);
+    } catch {
+      setParseError("That file could not be read.");
+    } finally {
+      readingRef.current = false;
+      setReading(false);
     }
-
-    const cleaned = parsed.data.filter((row) => (row.email ?? "").trim().length > 0);
-
-    if (cleaned.length === 0) {
-      setParseError("No rows with an email column were found. The header must include `email`.");
-      return;
-    }
-    if (cleaned.length > 500) {
-      setParseError(`That file has ${cleaned.length} rows; the limit is 500 per import.`);
-      return;
-    }
-
-    setRows(cleaned);
-    setFileName(name);
   }
 
-  function readFile(file: File) {
-    const reader = new FileReader();
-    reader.onload = () => ingest(String(reader.result ?? ""), file.name);
-    reader.onerror = () => setParseError("That file could not be read.");
-    reader.readAsText(file);
+  async function downloadTemplate() {
+    setPreparing(true);
+    try {
+      // Read at the moment of download, so the dropdowns hold exactly the
+      // departments and roles that are live right now.
+      const live = await loadOptions();
+      saveFile(await buildTemplate(live), TEMPLATE_FILE_NAME);
+    } catch (error) {
+      push({
+        tone: "error",
+        title: "The template could not be prepared",
+        // Anything but a server answer is the network or a chunk replaced by
+        // a deploy since this page loaded; a reload fixes both.
+        description:
+          error instanceof ApiClientError ? error.message : "Reload the page and try again.",
+      });
+    } finally {
+      setPreparing(false);
+    }
   }
 
-  function issueFor(row: Row): string | null {
-    const email = (row.email ?? "").trim();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return "Invalid email";
-    if (!(row.name ?? "").trim()) return "Missing name";
-    const dept = (row.department ?? "").trim();
-    if (dept && !departmentNames.has(dept.toLowerCase())) return `Unknown department "${dept}"`;
-    const role = (row.role ?? "").trim().toLowerCase();
-    if (role && !USER_ROLES.includes(role as never)) return `Unknown role "${role}"`;
+  function issueFor(row: PersonRow): string | null {
+    if (isSampleRow(row)) return "Sample row from the template — replace or delete it";
+    if (!row.email) return "Missing email";
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(row.email)) return "Invalid email";
+    if (!row.name) return "Missing name";
+    // Mirrors the import route's limit, so the row is caught before sending.
+    if (row.name.length > 120) return "Name is over 120 characters";
+    if (row.department && !departmentKeys.has(departmentKey(row.department))) {
+      return `Not an active department: "${row.department}"`;
+    }
+    const role = row.role.toLowerCase();
+    if (role && !options.roles.includes(role)) return `Unknown role "${row.role}"`;
     return null;
   }
 
   const problems = rows.filter((r) => issueFor(r));
+  const validCount = rows.length - problems.length;
 
   async function submit() {
     setLoading(true);
@@ -218,27 +266,34 @@ export function CsvImport({
               const file = e.dataTransfer.files?.[0];
               if (file) readFile(file);
             }}
-            onClick={() => inputRef.current?.click()}
+            onClick={() => {
+              if (!reading) inputRef.current?.click();
+            }}
+            aria-busy={reading}
             className={cn(
               "flex cursor-pointer flex-col items-center rounded-xl border border-dashed px-6 py-10 text-center transition-colors",
+              reading && "cursor-progress",
               dragging
                 ? "border-accent-line bg-accent-soft"
                 : "border-line-strong hover:bg-surface-hover",
             )}
           >
             <p className="text-[0.875rem] font-medium text-ink">
-              Drop a CSV here, or click to choose one
+              {reading ? "Reading the file…" : "Drop the filled-in template here, or click to choose it"}
             </p>
             <p className="mt-1 text-[0.8125rem] text-ink-muted">
-              Header row required: <span className="font-mono text-xs">email, name, department, role</span>
+              Excel (.xlsx) or CSV · up to {MAX_IMPORT_ROWS} people per file
             </p>
             <input
               ref={inputRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
+                // Cleared so choosing the same file again, after fixing it,
+                // still fires a change.
+                e.target.value = "";
                 if (file) readFile(file);
               }}
             />
@@ -257,19 +312,57 @@ export function CsvImport({
             )}
           </AnimatePresence>
 
-          <details className="rounded-xl border border-line bg-surface-sunk p-3">
-            <summary className="cursor-pointer text-[0.8125rem] font-medium text-ink-muted">
-              Show the expected format
-            </summary>
-            <pre className="mt-2.5 overflow-x-auto rounded-lg bg-canvas p-3 font-mono text-[0.6875rem] leading-relaxed text-ink-muted">
-              {TEMPLATE}
-            </pre>
-            <p className="mt-2 text-[0.75rem] leading-relaxed text-ink-faint">
-              <span className="font-medium">role</span> is one of user, agent, admin — it defaults
-              to user. <span className="font-medium">department</span> must match an existing
-              department name exactly (case-insensitive).
-            </p>
-          </details>
+          <div className="rounded-xl border border-line bg-surface-sunk p-3">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+              <p className="min-w-0 flex-1 basis-56 text-[0.8125rem] leading-relaxed text-ink-muted">
+                Start from the Excel template: department and role are drop-downs of what is
+                live right now. Keep its header row and replace the two example rows with one
+                row per person.
+              </p>
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={<Icons.download className="size-3.5" />}
+                loading={preparing}
+                onClick={downloadTemplate}
+              >
+                Download template
+              </Button>
+            </div>
+
+            <dl className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1.5 border-t border-line pt-3 text-[0.75rem] leading-relaxed">
+              <dt className="font-mono text-ink">email</dt>
+              <dd className="flex flex-wrap items-center gap-1 text-ink-faint">
+                {options.allowedDomains.length ? (
+                  <>
+                    <span>Required · allowed domains</span>
+                    <Values items={options.allowedDomains} />
+                  </>
+                ) : (
+                  <span>Required · no domain allow-list is set — add one under Settings</span>
+                )}
+              </dd>
+              <dt className="font-mono text-ink">name</dt>
+              <dd className="text-ink-faint">Required · their full name</dd>
+              <dt className="font-mono text-ink">department</dt>
+              <dd className="flex flex-wrap items-center gap-1 text-ink-faint">
+                {options.departments.length ? (
+                  <>
+                    <span>Optional · one of</span>
+                    <Values items={options.departments.map((d) => d.name)} />
+                  </>
+                ) : (
+                  <span>Optional · no active departments yet, so leave it blank</span>
+                )}
+              </dd>
+              <dt className="font-mono text-ink">role</dt>
+              <dd className="flex flex-wrap items-center gap-1 text-ink-faint">
+                <span>Optional · one of</span>
+                <Values items={options.roles} />
+                <span>— blank means user</span>
+              </dd>
+            </dl>
+          </div>
         </>
       ) : (
         <>
@@ -337,13 +430,25 @@ export function CsvImport({
             <Button variant="ghost" onClick={reset}>
               Cancel
             </Button>
-            <Button variant="primary" loading={loading} onClick={submit}>
-              Create {rows.length - problems.length} {problems.length > 0 && "valid "}
-              {rows.length - problems.length === 1 ? "account" : "accounts"}
+            <Button variant="primary" loading={loading} disabled={validCount === 0} onClick={submit}>
+              Create {validCount} {problems.length > 0 && "valid "}
+              {validCount === 1 ? "account" : "accounts"}
             </Button>
           </div>
         </>
       )}
     </div>
   );
+}
+
+/** Accepted values as separate chips, so a name with a comma reads as one. */
+function Values({ items }: { items: readonly string[] }) {
+  return items.map((item) => (
+    <code
+      key={item}
+      className="rounded border border-line bg-canvas px-1 font-mono text-[0.6875rem] text-ink-muted"
+    >
+      {item}
+    </code>
+  ));
 }

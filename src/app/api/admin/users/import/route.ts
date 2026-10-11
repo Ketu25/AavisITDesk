@@ -1,8 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { apiError, ApiError, requireApiAdmin } from "@/lib/api-auth";
-import { createUserWithTempPassword, resolveDepartment } from "@/lib/provisioning";
+import { activeDepartmentIds, createUserWithTempPassword } from "@/lib/provisioning";
+import { createClient } from "@/lib/supabase/server";
+import { throwDbError } from "@/lib/db-error";
 import { USER_ROLES } from "@/lib/database.types";
+import { departmentKey, MAX_IMPORT_ROWS, type ImportOptions } from "@/lib/people-import";
 
 const rowSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
@@ -19,7 +22,7 @@ const rowSchema = z.object({
 });
 
 const bodySchema = z.object({
-  rows: z.array(z.record(z.string(), z.string().nullable())).min(1).max(500),
+  rows: z.array(z.record(z.string(), z.string().nullable())).min(1).max(MAX_IMPORT_ROWS),
 });
 
 export type ImportResult = {
@@ -29,6 +32,40 @@ export type ImportResult = {
   temp_password?: string;
   message?: string;
 };
+
+/**
+ * What the template offers right now: active departments in the order
+ * requesters see them, every role, and the allowed email domains. Read when the
+ * template is downloaded, so its dropdowns are never older than that click.
+ */
+export async function GET() {
+  try {
+    await requireApiAdmin();
+    const supabase = await createClient();
+
+    const [departments, settings] = await Promise.all([
+      supabase
+        .from("departments")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("sort_order")
+        .order("name"),
+      supabase.from("app_settings").select("allowed_email_domains").maybeSingle(),
+    ]);
+
+    if (departments.error) throwDbError(departments.error, "Departments could not be loaded.");
+    if (settings.error) throwDbError(settings.error, "Settings could not be loaded.");
+
+    const options: ImportOptions = {
+      departments: departments.data ?? [],
+      allowedDomains: settings.data?.allowed_email_domains ?? [],
+      roles: USER_ROLES,
+    };
+    return NextResponse.json(options);
+  } catch (error) {
+    return apiError(error);
+  }
+}
 
 /**
  * Bulk create. Every row is attempted independently and reported back, so one
@@ -42,6 +79,7 @@ export async function POST(request: NextRequest) {
   try {
     const ctx = await requireApiAdmin();
     const { rows } = bodySchema.parse(await request.json());
+    const departmentIds = await activeDepartmentIds();
 
     const results: ImportResult[] = [];
     const seen = new Set<string>();
@@ -67,7 +105,15 @@ export async function POST(request: NextRequest) {
         }
         seen.add(parsed.email);
 
-        const departmentId = await resolveDepartment(parsed.department);
+        // A template downloaded before a department was retired can still name
+        // it, so only departments active right now are accepted.
+        const departmentId = parsed.department
+          ? departmentIds.get(departmentKey(parsed.department))
+          : null;
+        if (departmentId === undefined) {
+          throw new ApiError(422, `There is no active department called "${parsed.department}".`);
+        }
+
         const created = await createUserWithTempPassword(
           {
             email: parsed.email,
