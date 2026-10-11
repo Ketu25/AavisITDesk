@@ -204,7 +204,8 @@ export async function readPeopleFile(file: File): Promise<PeopleTable | string> 
     try {
       table = await readWorkbook(bytes);
     } catch {
-      return "The spreadsheet reader couldn't load. Check your connection and try again.";
+      // Offline, or a deploy since this page loaded replaced the chunk.
+      return "The spreadsheet reader couldn't load. Reload the page and try again.";
     }
     return table ?? `That workbook couldn't be read. ${SAVE_AS}`;
   }

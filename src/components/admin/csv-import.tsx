@@ -133,7 +133,10 @@ export function CsvImport({
       push({
         tone: "error",
         title: "The template could not be prepared",
-        description: error instanceof ApiClientError ? error.message : "Please try again.",
+        // Anything but a server answer is the network or a chunk replaced by
+        // a deploy since this page loaded; a reload fixes both.
+        description:
+          error instanceof ApiClientError ? error.message : "Reload the page and try again.",
       });
     } finally {
       setPreparing(false);
