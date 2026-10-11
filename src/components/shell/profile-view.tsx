@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/ui/avatar";
+import { clearAllDrafts } from "@/components/tickets/new-ticket";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
@@ -122,7 +123,8 @@ export function ProfileView({
               Active since {absoluteTime(profile.activated_at)}.
             </p>
           </div>
-          <form action="/auth/signout" method="post">
+          {/* A draft is personal; it does not outlive the session it was written in. */}
+          <form action="/auth/signout" method="post" onSubmit={() => clearAllDrafts()}>
             <Button type="submit" variant="danger">
               Sign out
             </Button>

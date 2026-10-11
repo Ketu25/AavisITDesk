@@ -9,7 +9,6 @@ import {
   useState,
   useTransition,
 } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { TicketRow, type TicketRowData } from "./ticket-row";
@@ -17,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/states";
+import { NewTicketButton } from "./new-ticket";
 import { Icons } from "@/components/shell/icons";
 import { OPEN_STATUSES } from "@/lib/constants";
 import { ticketSearchText } from "@/lib/queries";
@@ -361,13 +361,12 @@ export function MyTickets({
                   : "Tickets you've raised will appear here."
               }
               action={
-                <Link
-                  href="/tickets/new"
+                <NewTicketButton
                   className="inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-line-strong bg-surface px-3 text-[0.8125rem] font-medium text-ink transition-colors hover:bg-surface-hover"
                 >
                   <Icons.plus className="size-3.5" />
                   Raise a ticket
-                </Link>
+                </NewTicketButton>
               }
             />
           )

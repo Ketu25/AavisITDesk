@@ -9,6 +9,7 @@ import { Icons } from "./icons";
 import { ThemeToggle } from "./theme-toggle";
 import { MOBILE_NAV_ID, useMobileNav } from "./mobile-nav";
 import { CommandPaletteTrigger } from "./command-palette";
+import { NewTicketButton } from "@/components/tickets/new-ticket";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useEscape, useFocusTrap, useScrollLock } from "@/components/ui/use-overlay";
@@ -137,9 +138,10 @@ export function Sidebar({
 
       <div className="space-y-2 px-3 py-3">
         <motion.div whileTap={{ scale: 0.98 }} transition={spring.snappy}>
-          <Link
-            href="/tickets/new"
-            onClick={close}
+          {/* Opens over the current page. In the drawer, the drawer steps
+              aside first, so the dialog is not stacked on top of it. */}
+          <NewTicketButton
+            onOpen={close}
             className={cn(
               "group flex h-11 w-full items-center justify-center gap-2 rounded-[10px] lg:h-9",
               "bg-accent text-[0.8125rem] font-medium text-[var(--accent-ink)]",
@@ -148,7 +150,7 @@ export function Sidebar({
           >
             <Icons.plus className="size-4 transition-transform duration-300 group-hover:rotate-90" />
             New ticket
-          </Link>
+          </NewTicketButton>
         </motion.div>
         {/* In the drawer, the drawer steps aside first so the palette is not
             opened underneath it. */}

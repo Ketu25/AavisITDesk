@@ -11,12 +11,13 @@ import {
   useState,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { Icons } from "./icons";
 import { useIsClient } from "@/components/motion";
 import { Highlight } from "@/components/ui/highlight";
 import { Spinner } from "@/components/ui/spinner";
 import { useEscape, useFocusTrap, useScrollLock } from "@/components/ui/use-overlay";
+import { NEW_TICKET_PATH, useNewTicket } from "@/components/tickets/new-ticket";
 import { createClient } from "@/lib/supabase/client";
 import { STATUS_META } from "@/lib/constants";
 import { ticketSearchFilter, ticketSearchText } from "@/lib/queries";
@@ -57,7 +58,7 @@ const RECENT_SHOWN = 5;
 type PageItem = { href: string; label: string; icon: keyof typeof Icons; keywords: string };
 
 const PAGES: PageItem[] = [
-  { href: "/tickets/new", label: "New ticket", icon: "plus", keywords: "raise create report problem issue help" },
+  { href: NEW_TICKET_PATH, label: "New ticket", icon: "plus", keywords: "raise create report problem issue help" },
   { href: "/dashboard", label: "Overview", icon: "overview", keywords: "home dashboard start" },
   { href: "/tickets", label: "My tickets", icon: "ticket", keywords: "requests mine history" },
   { href: "/profile", label: "Profile", icon: "people", keywords: "account password me" },
@@ -197,6 +198,7 @@ function Palette({ role, onClose }: { role: UserRole; onClose: () => void }) {
   const router = useRouter();
   const pathname = usePathname();
   const reduced = useReducedMotion();
+  const { open: openNewTicket } = useNewTicket();
   const panelRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const optionId = useCallback((index: number) => `${listId}-option-${index}`, [listId]);
@@ -208,9 +210,12 @@ function Palette({ role, onClose }: { role: UserRole; onClose: () => void }) {
   const [found, setFound] = useState<{ query: string; tickets: PaletteTicket[] } | null>(null);
   const [failedQuery, setFailedQuery] = useState<string | null>(null);
 
-  useEscape(true, onClose);
-  useScrollLock(true);
-  useFocusTrap(panelRef, true);
+  // Released as the exit animation starts, not at unmount: by then the
+  // palette's nodes are gone and the trap could not hand focus back.
+  const present = useIsPresent();
+  useEscape(present, onClose);
+  useScrollLock(present);
+  useFocusTrap(panelRef, present);
 
   // Browser back, or anything else that navigates, takes the palette with it.
   const openedOn = useRef(pathname);
@@ -323,7 +328,10 @@ function Palette({ role, onClose }: { role: UserRole; onClose: () => void }) {
   function go(item: Item | undefined) {
     if (!item) return;
     onClose();
-    if (item.href !== pathname) router.push(item.href);
+    // Raising a ticket opens over the current page, the same as every other
+    // "New ticket" control, instead of navigating away from it.
+    if (item.href === NEW_TICKET_PATH) openNewTicket();
+    else if (item.href !== pathname) router.push(item.href);
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
