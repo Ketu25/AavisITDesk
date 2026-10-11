@@ -21,6 +21,18 @@ export const STATUS_META: Record<TicketStatus, Meta> = {
 /** Longest SLA an admin can set. The API enforces it; the SLA screen explains it. */
 export const SLA_MAX_MINUTES = 60 * 24 * 90;
 
+/**
+ * Lengths a new ticket must fall within, after trimming. Here rather than in
+ * lib/validation so the form can check them without shipping zod to the
+ * browser; the schema reads the same numbers, so the two cannot drift.
+ */
+export const TICKET_LIMITS = {
+  subjectMin: 3,
+  subjectMax: 160,
+  descriptionMin: 5,
+  descriptionMax: 8000,
+} as const;
+
 export const PRIORITY_META: Record<TicketPriority, Meta & { rank: number }> = {
   urgent: { label: "Urgent", tone: "rose",   rank: 0 },
   high:   { label: "High",   tone: "orange", rank: 1 },

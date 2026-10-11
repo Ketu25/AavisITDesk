@@ -98,6 +98,16 @@ export const Icons = {
       <path d="m5.5 7.8 4.5 4.5 4.5-4.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   ),
+  arrowLeft: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
+      <path d="M15.5 10h-11m4.4-4.4L4.5 10l4.4 4.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  arrowRight: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
+      <path d="M4.5 10h11m-4.4-4.4 4.4 4.4-4.4 4.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
   search: ({ className }: IconProps) => (
     <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
       <circle cx="9" cy="9" r="5.4" stroke="currentColor" strokeWidth="1.6" />

@@ -30,6 +30,10 @@ function focusablesIn(node: HTMLElement) {
  * Keeps Tab inside `ref` while `active`, and hands focus back to whatever had
  * it when the overlay closes — without that, dismissing a drawer drops the
  * caret at the top of the document and the next Tab starts over.
+ *
+ * Focus starts on the first visible `[data-autofocus]` inside the overlay, or
+ * the first focusable element if nothing is marked. The mark is how an overlay
+ * whose first control is its close button points at the field that matters.
  */
 export function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean) {
   useEffect(() => {
@@ -43,8 +47,9 @@ export function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean
     // below armed while focus was still outside the overlay — the worst of
     // both states. `preventScroll` keeps the entrance animation from being
     // yanked into view mid-flight.
-    const [first] = focusablesIn(node);
-    (first ?? node).focus({ preventScroll: true });
+    const items = focusablesIn(node);
+    const marked = items.find((el) => el.hasAttribute("data-autofocus"));
+    (marked ?? items[0] ?? node).focus({ preventScroll: true });
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Tab" || !node) return;
@@ -72,23 +77,35 @@ export function useFocusTrap(ref: RefObject<HTMLElement | null>, active: boolean
       document.removeEventListener("keydown", onKeyDown);
       // Only reclaim focus if it is still somewhere inside the overlay we are
       // tearing down; if the user has already clicked elsewhere, leave it.
-      if (!node.contains(document.activeElement)) return;
-      restoreTo?.focus?.({ preventScroll: true });
+      // Nor if the opener has since left the page — the drawer that held it.
+      if (!node.contains(document.activeElement) || !restoreTo?.isConnected) return;
+      restoreTo.focus?.({ preventScroll: true });
     };
   }, [ref, active]);
 }
 
+/** How many overlays currently hold the lock, and what to put back after. */
+let scrollLocks = 0;
+let unlockedOverflow = "";
+
 /**
- * Freezes the page behind an overlay. Restores the caller's own value rather
- * than clearing it, so two overlaps do not fight over the style.
+ * Freezes the page behind an overlay.
+ *
+ * Counted, not saved-and-restored per caller. Overlays hand over to each
+ * other — the palette opens the new-ticket dialog, the drawer does too — and
+ * the outgoing one only unmounts once its exit animation ends. Each restoring
+ * the value it saw on the way in let the first one out put `overflow: ""` back
+ * underneath the one still open, and the page scrolled behind it.
  */
 export function useScrollLock(active: boolean) {
   useEffect(() => {
     if (!active) return;
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    if (scrollLocks++ === 0) {
+      unlockedOverflow = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+    }
     return () => {
-      document.body.style.overflow = previous;
+      if (--scrollLocks === 0) document.body.style.overflow = unlockedOverflow;
     };
   }, [active]);
 }
@@ -110,7 +127,9 @@ export function useEscape(
   useEffect(() => {
     if (!active) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key !== "Escape") return;
+      // Mid-composition, Escape belongs to the IME: it cancels the candidate
+      // being typed, and must not take the overlay down with it.
+      if (event.key !== "Escape" || event.isComposing) return;
       if (stopPropagation) event.stopPropagation();
       onEscape();
     }

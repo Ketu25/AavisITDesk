@@ -10,6 +10,7 @@ import { LivePulse, Reveal, StaggerChildren } from "@/components/motion";
 import { EmptyState } from "@/components/ui/states";
 import { Icons } from "@/components/shell/icons";
 import { DashboardList } from "@/components/tickets/dashboard-list";
+import { NewTicketButton } from "@/components/tickets/new-ticket";
 import { ActiveTickets } from "@/components/tickets/ticket-tracker";
 import { TicketHistory, type HistoryRow } from "@/components/tickets/ticket-history";
 import { OPEN_STATUSES } from "@/lib/constants";
@@ -228,13 +229,12 @@ export default async function DashboardPage() {
         title="No tickets yet"
         description="When something breaks, raise a ticket and IT will pick it up from the shared queue."
         action={
-          <Link
-            href="/tickets/new"
+          <NewTicketButton
             className="inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-line-strong bg-surface px-3 text-[0.8125rem] font-medium text-ink transition-colors hover:bg-surface-hover"
           >
             <Icons.plus className="size-3.5" />
             Raise your first ticket
-          </Link>
+          </NewTicketButton>
         }
       />
     </div>
@@ -255,13 +255,10 @@ export default async function DashboardPage() {
             : "Here's where your requests stand."
         }
         actions={
-          <Link
-            href="/tickets/new"
-            className="inline-flex h-8 items-center gap-1.5 rounded-[9px] bg-accent px-3 text-[0.8125rem] font-medium text-[var(--accent-ink)] transition-[filter] hover:brightness-110"
-          >
+          <NewTicketButton className="inline-flex h-8 items-center gap-1.5 rounded-[9px] bg-accent px-3 text-[0.8125rem] font-medium text-[var(--accent-ink)] transition-[filter] hover:brightness-110">
             <Icons.plus className="size-3.5" />
             New ticket
-          </Link>
+          </NewTicketButton>
         }
       />
 

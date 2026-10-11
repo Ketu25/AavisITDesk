@@ -7,6 +7,7 @@ import { MobileNavProvider } from "@/components/shell/mobile-nav";
 import { CommandPaletteProvider } from "@/components/shell/command-palette";
 import { LiveNotices } from "@/components/shell/live-notices";
 import { TimeZoneSync } from "@/components/shell/time-zone-sync";
+import { NewTicketProvider } from "@/components/tickets/new-ticket";
 import { RouteTransition } from "@/components/motion";
 import { OPEN_STATUSES } from "@/lib/constants";
 
@@ -44,22 +45,27 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     breached: breachedResult.count ?? 0,
   };
 
+  const departmentName = departmentResult.data?.name ?? null;
+
   return (
     <MobileNavProvider>
-      <CommandPaletteProvider role={profile.role}>
-        <div className="flex min-h-dvh">
-          <Sidebar
-            profile={profile}
-            departmentName={departmentResult.data?.name ?? null}
-            counts={counts}
-          />
-          <AppBackdrop alert={counts.breached} />
-          <RouteTransition className="flex min-w-0 flex-1 flex-col">{children}</RouteTransition>
-          <RealtimeRefresh />
-          <LiveNotices viewerId={profile.id} />
-          <TimeZoneSync />
-        </div>
-      </CommandPaletteProvider>
+      {/* Outside the palette, which opens the new-ticket dialog itself. */}
+      <NewTicketProvider
+        userId={profile.id}
+        departmentName={departmentName}
+        isAdmin={profile.role === "admin"}
+      >
+        <CommandPaletteProvider role={profile.role}>
+          <div className="flex min-h-dvh">
+            <Sidebar profile={profile} departmentName={departmentName} counts={counts} />
+            <AppBackdrop alert={counts.breached} />
+            <RouteTransition className="flex min-w-0 flex-1 flex-col">{children}</RouteTransition>
+            <RealtimeRefresh />
+            <LiveNotices viewerId={profile.id} />
+            <TimeZoneSync />
+          </div>
+        </CommandPaletteProvider>
+      </NewTicketProvider>
     </MobileNavProvider>
   );
 }

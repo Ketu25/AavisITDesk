@@ -1,10 +1,18 @@
 import { z } from "zod";
 import { TICKET_PRIORITIES, TICKET_STATUSES, USER_ROLES } from "@/lib/database.types";
-import { SLA_MAX_MINUTES } from "@/lib/constants";
+import { SLA_MAX_MINUTES, TICKET_LIMITS } from "@/lib/constants";
 
 export const createTicketSchema = z.object({
-  subject: z.string().trim().min(3, "Give the ticket a short title.").max(160),
-  description: z.string().trim().min(5, "Describe what is happening.").max(8000),
+  subject: z
+    .string()
+    .trim()
+    .min(TICKET_LIMITS.subjectMin, "Give the ticket a short title.")
+    .max(TICKET_LIMITS.subjectMax),
+  description: z
+    .string()
+    .trim()
+    .min(TICKET_LIMITS.descriptionMin, "Describe what is happening.")
+    .max(TICKET_LIMITS.descriptionMax),
   category: z.string().trim().min(1, "Pick a category."),
   priority: z.enum(TICKET_PRIORITIES),
 });

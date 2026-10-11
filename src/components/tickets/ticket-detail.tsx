@@ -14,6 +14,7 @@ import { useToast } from "@/components/ui/toast";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { Icons } from "@/components/shell/icons";
 import { PriorityPill, StatusPill } from "./pills";
+import { NewTicketButton } from "./new-ticket";
 import { SlaDial } from "./sla-instrument";
 import {
   TicketTimeline,
@@ -258,13 +259,12 @@ export function TicketDetail({
                     Reopen work
                   </Button>
                 ) : (
-                  <Link
-                    href="/tickets/new"
+                  <NewTicketButton
                     className="inline-flex h-8 flex-none items-center gap-1.5 rounded-[9px] border border-line-strong bg-surface px-3 text-[0.8125rem] font-medium text-ink transition-colors hover:bg-surface-hover"
                   >
                     <Icons.plus className="size-3.5" />
                     New ticket
-                  </Link>
+                  </NewTicketButton>
                 )}
               </div>
             ) : (
