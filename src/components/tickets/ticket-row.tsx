@@ -15,6 +15,8 @@ export type TicketRowData = Ticket & {
   department: { name: string } | null;
   creator: { id: string; full_name: string } | null;
   assignee: { id: string; full_name: string } | null;
+  /** Only the detail view reads where a ticket came from; null if hidden from the viewer. */
+  quick?: { label: string; group: { name: string } | null } | null;
 };
 
 /** A stable empty array, so a row that is not being searched does not hand

@@ -33,6 +33,45 @@ export const TICKET_LIMITS = {
   descriptionMax: 8000,
 } as const;
 
+/**
+ * Lengths for quick tickets, after trimming. The quick_tickets migration holds
+ * the same numbers as check constraints. A template's details stop well short
+ * of a ticket's own limit so the requester's answer and note always fit; the
+ * title shares the ticket's limits outright.
+ */
+export const QUICK_TICKET_LIMITS = {
+  groupNameMax: 60,
+  groupDescriptionMax: 160,
+  labelMin: 2,
+  labelMax: 60,
+  descriptionMax: 2000,
+  promptMin: 3,
+  promptMax: 120,
+  answerMax: 200,
+  noteMax: 2000,
+} as const;
+
+/** The icons a quick-ticket group can wear. The migration checks against this same list. */
+export const QUICK_TICKET_ICONS = [
+  "printer", "folder", "wifi", "mail", "monitor", "phone", "key", "shield", "app", "wrench", "bolt",
+] as const;
+
+export type QuickTicketIcon = (typeof QUICK_TICKET_ICONS)[number];
+
+export const QUICK_ICON_LABEL: Record<QuickTicketIcon, string> = {
+  printer: "Printer",
+  folder: "Folder",
+  wifi: "Network",
+  mail: "Email",
+  monitor: "Computer",
+  phone: "Phone",
+  key: "Access",
+  shield: "Security",
+  app: "Software",
+  wrench: "Equipment",
+  bolt: "General",
+};
+
 export const PRIORITY_META: Record<TicketPriority, Meta & { rank: number }> = {
   urgent: { label: "Urgent", tone: "rose",   rank: 0 },
   high:   { label: "High",   tone: "orange", rank: 1 },

@@ -273,6 +273,7 @@ export type Database = {
           ticket_number: string;
           updated_at: string;
           work_started_at: string | null;
+          quick_ticket_id: string | null;
         };
         Insert: {
           assigned_to?: string | null;
@@ -285,6 +286,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["ticket_status"];
           subject: string;
           ticket_number?: string;
+          quick_ticket_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["tickets"]["Row"]>;
         Relationships: [
@@ -309,6 +311,88 @@ export type Database = {
             referencedRelation: "departments";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "tickets_quick_ticket_id_fkey";
+            columns: ["quick_ticket_id"];
+            isOneToOne: false;
+            referencedRelation: "quick_tickets";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      quick_ticket_groups: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          icon: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          icon?: string;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["quick_ticket_groups"]["Row"]>;
+        Relationships: [];
+      };
+      quick_tickets: {
+        Row: {
+          created_at: string;
+          description: string;
+          detail_prompt: string | null;
+          detail_required: boolean;
+          group_id: string;
+          id: string;
+          is_active: boolean;
+          label: string;
+          priority: Database["public"]["Enums"]["ticket_priority"];
+          revision: number;
+          routing_rule_id: string;
+          sort_order: number;
+          subject: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          description: string;
+          detail_prompt?: string | null;
+          detail_required?: boolean;
+          group_id: string;
+          id?: string;
+          is_active?: boolean;
+          label: string;
+          priority?: Database["public"]["Enums"]["ticket_priority"];
+          revision?: number;
+          routing_rule_id: string;
+          sort_order?: number;
+          subject: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["quick_tickets"]["Row"]>;
+        Relationships: [
+          {
+            foreignKeyName: "quick_tickets_group_id_fkey";
+            columns: ["group_id"];
+            isOneToOne: false;
+            referencedRelation: "quick_ticket_groups";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "quick_tickets_routing_rule_id_fkey";
+            columns: ["routing_rule_id"];
+            isOneToOne: false;
+            referencedRelation: "routing_rules";
+            referencedColumns: ["id"];
+          },
         ];
       };
     };
@@ -325,6 +409,12 @@ export type Database = {
       is_email_allowed: { Args: { p_email: string }; Returns: boolean };
       report_summary: { Args: { p_from?: string; p_to?: string }; Returns: Json };
       reorder_routing_rules: { Args: { p_ids: string[] }; Returns: undefined };
+      reorder_quick_ticket_groups: { Args: { p_ids: string[] }; Returns: undefined };
+      reorder_quick_tickets: { Args: { p_group_id: string; p_ids: string[] }; Returns: undefined };
+      quick_ticket_usage: {
+        Args: never;
+        Returns: { quick_ticket_id: string; total: number; last_30_days: number; last_used_at: string }[];
+      };
       reset_invite_state: { Args: { p_user_id: string }; Returns: boolean };
       temp_password_is_valid: { Args: { p_user_id: string }; Returns: boolean };
       stamp_temp_password: { Args: { p_user_id: string; p_expires: string }; Returns: undefined };
@@ -353,6 +443,8 @@ export type SlaRule        = T["sla_rules"]["Row"];
 export type RoutingRule    = T["routing_rules"]["Row"];
 export type AppSettings    = T["app_settings"]["Row"];
 export type EmailAllowlist = T["email_allowlist"]["Row"];
+export type QuickTicketGroup = T["quick_ticket_groups"]["Row"];
+export type QuickTicket    = T["quick_tickets"]["Row"];
 
 export type UserRole       = Database["public"]["Enums"]["user_role"];
 export type UserStatus     = Database["public"]["Enums"]["user_status"];

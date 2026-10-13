@@ -258,9 +258,9 @@ Roles are additive and stored as one field on the user record.
 
 | Role | Can do |
 |---|---|
-| `user` | Submit tickets, track and comment on their own, confirm or reopen a resolution |
+| `user` | Submit tickets (including quick tickets), track and comment on their own, confirm or reopen a resolution |
 | `agent` | Everything a user can, plus work the shared queue: assign, re-prioritise, change status, leave internal notes, see reports |
-| `admin` | Everything an agent can, plus invite/deprovision people, manage departments, SLA rules, routing rules and settings |
+| `admin` | Everything an agent can, plus invite/deprovision people, manage departments, SLA rules, routing rules, quick tickets and settings |
 
 Agents and admins raise their own tickets exactly like anyone else.
 
@@ -408,6 +408,37 @@ Agents can always override manually, or hit **Auto-assign** on a ticket.
 
 ---
 
+## Quick tickets
+
+Common problems written up once by an admin — *Printer → Paper jam*,
+*Shared drive → Drive not showing* — that anyone can report from **Quick
+tickets** in the sidebar, or by typing in ⌘K.
+
+- **Nothing is sent on one tap.** Picking one opens a confirmation showing
+  exactly what IT will receive: title, details, category, urgency, department.
+  The requester can add a note, and answers the admin's question if the quick
+  ticket has one ("Which printer?"). The answer is added to the ticket title,
+  so five paper-jam tickets can still be told apart in the queue.
+- **Routing is unchanged.** A quick ticket points at a routing rule by id, so
+  its tickets are assigned, prioritised (a category's default still lifts
+  Normal) and notified exactly like any other.
+- **Duplicates are a decision.** If the requester already has an unfinished
+  ticket from the same quick ticket, they are shown it and must choose to send
+  another.
+- **No stale sends.** If an admin edits a quick ticket while someone has it
+  open, the requester is shown the new version before anything goes. Two
+  admins editing at once cannot overwrite each other (`revision` check).
+- **Switched off means off.** A hidden quick ticket, group or category is
+  refused by the insert trigger, not just hidden in the UI.
+- **History is kept.** A quick ticket that has raised tickets can be hidden but
+  not deleted, and a routing rule quick tickets use cannot be deleted. Tickets
+  store a copy of the text, so editing a quick ticket never rewrites one sent.
+
+Admins manage groups and quick tickets in **Administration → Quick ticket
+setup**, which also shows how often each one is used.
+
+---
+
 ## Notifications
 
 A trigger on `tickets` insert calls the `notify-new-ticket` Edge Function via
@@ -495,7 +526,9 @@ enforces it.
 | `email_allowlist` | Individual address exceptions to the domain allow-list |
 | `sla_rules` | Priority → duration and at-risk threshold |
 | `routing_rules` | Category → default owner / department / priority. Also the category dropdown. |
-| `tickets` | `AAV-####` number, requester, department, category, priority, status, assignee, SLA fields |
+| `quick_ticket_groups` | Admin-managed groups of quick tickets (Printer, Shared drive): name, icon, order, live/hidden |
+| `quick_tickets` | One common problem: routing rule, title, details, urgency, optional question, `revision` |
+| `tickets` | `AAV-####` number, requester, department, category, priority, status, assignee, SLA fields, the quick ticket it came from |
 | `ticket_comments` | Public replies and agent-only internal notes |
 | `ticket_events` | Append-only audit trail, written by triggers only — no client insert policy exists |
 | `notification_log` | Delivery outcome per channel per ticket |
