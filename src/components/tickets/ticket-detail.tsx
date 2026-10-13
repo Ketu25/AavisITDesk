@@ -329,6 +329,18 @@ export function TicketDetail({
                 </Row>
                 <Row label="Department">{ticket.department?.name ?? "—"}</Row>
                 <Row label="Category">{ticket.category}</Row>
+                {ticket.quick_ticket_id && (
+                  <Row label="Raised with">
+                    {ticket.quick ? (
+                      <span className="block break-words">
+                        {ticket.quick.group ? `${ticket.quick.group.name} › ` : ""}
+                        {ticket.quick.label}
+                      </span>
+                    ) : (
+                      "Quick ticket"
+                    )}
+                  </Row>
+                )}
                 <Row label="Assignee">
                   {ticket.assignee ? (
                     <span className="flex items-center gap-1.5">

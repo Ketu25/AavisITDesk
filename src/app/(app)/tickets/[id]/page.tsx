@@ -27,10 +27,12 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   const ctx = await requireUser();
   const supabase = await createClient();
 
-  // RLS decides visibility: a requester sees only their own ticket.
+  // RLS decides visibility: a requester sees only their own ticket. Where it
+  // came from rides along; a quick ticket since hidden reads as null to a
+  // requester, and the sidebar says so without naming it.
   const { data: ticket } = await supabase
     .from("tickets")
-    .select(TICKET_SELECT)
+    .select(`${TICKET_SELECT}, quick:quick_tickets(label, group:quick_ticket_groups(name))`)
     .eq("id", id)
     .maybeSingle();
 

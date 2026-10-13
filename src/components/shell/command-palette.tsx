@@ -18,9 +18,11 @@ import { Highlight } from "@/components/ui/highlight";
 import { Spinner } from "@/components/ui/spinner";
 import { useEscape, useFocusTrap, useScrollLock } from "@/components/ui/use-overlay";
 import { NEW_TICKET_PATH, useNewTicket } from "@/components/tickets/new-ticket";
+import { QuickIcon, useQuickTicket } from "@/components/quick-tickets";
 import { createClient } from "@/lib/supabase/client";
 import { STATUS_META } from "@/lib/constants";
 import { ticketSearchFilter, ticketSearchText } from "@/lib/queries";
+import { QUICK_ISSUE_SELECT, groupQuickIssues, type QuickIssue } from "@/lib/quick-tickets";
 import { SEARCH_MAX_LENGTH, fold, matchesAllTerms, parseSearchTerms } from "@/lib/search";
 import { transition } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -54,6 +56,8 @@ const DEBOUNCE_MS = 160;
 const SEARCH_FETCH = 30;
 const SEARCH_SHOWN = 8;
 const RECENT_SHOWN = 5;
+/** Quick tickets only appear once something is typed, and only a few. */
+const QUICK_SHOWN = 4;
 
 type PageItem = { href: string; label: string; icon: keyof typeof Icons; keywords: string };
 
@@ -61,6 +65,12 @@ const PAGES: PageItem[] = [
   { href: NEW_TICKET_PATH, label: "New ticket", icon: "plus", keywords: "raise create report problem issue help" },
   { href: "/dashboard", label: "Overview", icon: "overview", keywords: "home dashboard start" },
   { href: "/tickets", label: "My tickets", icon: "ticket", keywords: "requests mine history" },
+  {
+    href: "/quick-tickets",
+    label: "Quick tickets",
+    icon: "bolt",
+    keywords: "common problems issues report fast printer shared drive",
+  },
   { href: "/profile", label: "Profile", icon: "people", keywords: "account password me" },
 ];
 const AGENT_PAGES: PageItem[] = [
@@ -72,11 +82,18 @@ const ADMIN_PAGES: PageItem[] = [
   { href: "/admin/departments", label: "Departments", icon: "building", keywords: "teams org" },
   { href: "/admin/sla", label: "SLA rules", icon: "clock", keywords: "targets service level" },
   { href: "/admin/routing", label: "Routing", icon: "route", keywords: "categories assignment" },
+  {
+    href: "/admin/quick-tickets",
+    label: "Quick ticket setup",
+    icon: "wrench",
+    keywords: "quick tickets manage common issues templates presets groups",
+  },
   { href: "/admin/settings", label: "Settings", icon: "settings", keywords: "notifications teams email config" },
 ];
 
 type Item =
   | { kind: "ticket"; key: string; href: string; ticket: PaletteTicket }
+  | { kind: "quick"; key: string; issue: QuickIssue }
   | { kind: "page"; key: string; href: string; page: PageItem };
 
 // ------------------------------------------------------------------ context --
@@ -199,6 +216,7 @@ function Palette({ role, onClose }: { role: UserRole; onClose: () => void }) {
   const pathname = usePathname();
   const reduced = useReducedMotion();
   const { open: openNewTicket } = useNewTicket();
+  const { open: openQuickTicket } = useQuickTicket();
   const panelRef = useRef<HTMLDivElement>(null);
   const listId = useId();
   const optionId = useCallback((index: number) => `${listId}-option-${index}`, [listId]);
@@ -209,6 +227,7 @@ function Palette({ role, onClose }: { role: UserRole; onClose: () => void }) {
   const [recent, setRecent] = useState<PaletteTicket[] | null>(null);
   const [found, setFound] = useState<{ query: string; tickets: PaletteTicket[] } | null>(null);
   const [failedQuery, setFailedQuery] = useState<string | null>(null);
+  const [quickIssues, setQuickIssues] = useState<QuickIssue[]>([]);
 
   // Released as the exit animation starts, not at unmount: by then the
   // palette's nodes are gone and the trap could not hand focus back.
@@ -238,6 +257,24 @@ function Palette({ role, onClose }: { role: UserRole; onClose: () => void }) {
       .then(({ data, error }) => {
         if (cancelled) return;
         setRecent(error ? [] : ((data ?? []) as unknown as PaletteTicket[]));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // The quick tickets on offer — a short list, fetched whole and filtered here.
+  // Asked again on every open so one IT has just switched off is not offered.
+  useEffect(() => {
+    let cancelled = false;
+    createClient()
+      .from("quick_tickets")
+      .select(QUICK_ISSUE_SELECT)
+      .eq("is_active", true)
+      .then(({ data, error }) => {
+        if (cancelled || error) return;
+        const groups = groupQuickIssues((data ?? []) as unknown as Record<string, unknown>[]);
+        setQuickIssues(groups.flatMap((group) => group.issues));
       });
     return () => {
       cancelled = true;
@@ -305,6 +342,18 @@ function Palette({ role, onClose }: { role: UserRole; onClose: () => void }) {
     return all.filter((page) => matchesAllTerms(fold(`${page.label} ${page.keywords}`), terms));
   }, [isAgent, role, searching, terms]);
 
+  const quick = useMemo(() => {
+    if (!searching) return [];
+    return quickIssues
+      .filter((issue) =>
+        matchesAllTerms(
+          fold(`${issue.label} ${issue.group.name} ${issue.subject} ${issue.category}`),
+          terms,
+        ),
+      )
+      .slice(0, QUICK_SHOWN);
+  }, [searching, quickIssues, terms]);
+
   const items: Item[] = useMemo(
     () => [
       ...tickets.map((ticket) => ({
@@ -313,9 +362,10 @@ function Palette({ role, onClose }: { role: UserRole; onClose: () => void }) {
         href: `/tickets/${ticket.id}`,
         ticket,
       })),
+      ...quick.map((issue) => ({ kind: "quick" as const, key: `q-${issue.id}`, issue })),
       ...pages.map((page) => ({ kind: "page" as const, key: `p-${page.href}`, href: page.href, page })),
     ],
-    [tickets, pages],
+    [tickets, quick, pages],
   );
 
   const activeIndex = items.length === 0 ? -1 : Math.min(active, items.length - 1);
@@ -328,9 +378,12 @@ function Palette({ role, onClose }: { role: UserRole; onClose: () => void }) {
   function go(item: Item | undefined) {
     if (!item) return;
     onClose();
+    // A quick ticket opens its confirm dialog over the current page; nothing
+    // is sent from the palette itself.
+    if (item.kind === "quick") openQuickTicket(item.issue);
     // Raising a ticket opens over the current page, the same as every other
     // "New ticket" control, instead of navigating away from it.
-    if (item.href === NEW_TICKET_PATH) openNewTicket();
+    else if (item.href === NEW_TICKET_PATH) openNewTicket();
     else if (item.href !== pathname) router.push(item.href);
   }
 
@@ -394,6 +447,23 @@ function Palette({ role, onClose }: { role: UserRole; onClose: () => void }) {
             <span className="flex-none text-[0.6875rem] text-ink-faint">
               {STATUS_META[item.ticket.status]?.label ?? item.ticket.status}
             </span>
+          </>
+        ) : item.kind === "quick" ? (
+          <>
+            <QuickIcon
+              name={item.issue.group.icon}
+              className={cn("size-4 flex-none", selected ? "text-accent" : "text-ink-faint")}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[0.8125rem] text-ink">
+                <Highlight text={item.issue.label} terms={terms} />
+              </p>
+              <p className="mt-0.5 truncate text-[0.6875rem] text-ink-faint">
+                <Highlight text={item.issue.group.name} terms={terms} /> ·{" "}
+                <Highlight text={item.issue.category} terms={terms} />
+              </p>
+            </div>
+            <span className="flex-none text-[0.6875rem] text-ink-faint">Quick ticket</span>
           </>
         ) : (
           <>
@@ -506,12 +576,29 @@ function Palette({ role, onClose }: { role: UserRole; onClose: () => void }) {
             </p>
           )}
 
+          {quick.length > 0 && (
+            <div role="group" aria-label="Quick tickets" className={cn(tickets.length > 0 && "mt-2")}>
+              <p aria-hidden className="eyebrow px-2.5 pb-1.5 pt-1">
+                Report a common problem
+              </p>
+              {items
+                .slice(tickets.length, tickets.length + quick.length)
+                .map((item, index) => option(item, tickets.length + index))}
+            </div>
+          )}
+
           {pages.length > 0 && (
-            <div role="group" aria-label="Pages" className={cn(tickets.length > 0 && "mt-2")}>
+            <div
+              role="group"
+              aria-label="Pages"
+              className={cn(tickets.length + quick.length > 0 && "mt-2")}
+            >
               <p aria-hidden className="eyebrow px-2.5 pb-1.5 pt-1">
                 Go to
               </p>
-              {items.slice(tickets.length).map((item, index) => option(item, tickets.length + index))}
+              {items
+                .slice(tickets.length + quick.length)
+                .map((item, index) => option(item, tickets.length + quick.length + index))}
             </div>
           )}
 

@@ -58,14 +58,39 @@ export async function DELETE(
             "but existing tickets keep their category.",
         );
       }
+
+      // Quick tickets point at the rule itself; the foreign key refuses the
+      // delete either way, and this says what to do about it.
+      const { count: quick } = await admin
+        .from("quick_tickets")
+        .select("id", { count: "exact", head: true })
+        .eq("routing_rule_id", id);
+
+      if ((quick ?? 0) > 0) throw quickTicketsInUse(rule.category, quick ?? 0);
     }
 
     const supabase = await createClient();
     const { error } = await supabase.from("routing_rules").delete().eq("id", id);
-    if (error) throwDbError(error, "That routing rule could not be removed.");
+    if (error) {
+      // A quick ticket added to this category since the count above.
+      if (error.code === "23503" && rule) throw quickTicketsInUse(rule.category, null);
+      throwDbError(error, "That routing rule could not be removed.");
+    }
 
     return NextResponse.json({ ok: true });
   } catch (error) {
     return apiError(error);
   }
+}
+
+function quickTicketsInUse(category: string, count: number | null) {
+  const subject =
+    count === null
+      ? "Quick tickets use"
+      : `${count} quick ticket${count === 1 ? " uses" : "s use"}`;
+  return new ApiError(
+    409,
+    `${subject} the "${category}" category. Move ${count === 1 ? "it" : "them"} to another ` +
+      "category in Quick tickets first, or deactivate this rule instead.",
+  );
 }

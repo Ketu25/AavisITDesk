@@ -62,6 +62,7 @@ export function Sidebar({
       items: [
         { href: "/dashboard", label: "Overview", icon: "overview" },
         { href: "/tickets", label: "My tickets", icon: "ticket", badge: counts.myOpen },
+        { href: "/quick-tickets", label: "Quick tickets", icon: "bolt" },
       ],
     },
     ...(isAgent
@@ -90,6 +91,7 @@ export function Sidebar({
               { href: "/admin/departments", label: "Departments", icon: "building" as const },
               { href: "/admin/sla", label: "SLA rules", icon: "clock" as const },
               { href: "/admin/routing", label: "Routing", icon: "route" as const },
+              { href: "/admin/quick-tickets", label: "Quick ticket setup", icon: "wrench" as const },
               { href: "/admin/settings", label: "Settings", icon: "settings" as const },
             ],
           },

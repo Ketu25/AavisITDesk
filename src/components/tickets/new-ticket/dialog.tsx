@@ -18,12 +18,12 @@ import { NewTicketWizard } from "./wizard";
 /** Viewport point the dialog grows out of — the centre of the control that opened it. */
 export type Origin = { x: number; y: number };
 
-/** Below `sm`, the dialog is a sheet that rises from the bottom edge. */
-const SHEET_QUERY = "(max-width: 639.98px)";
+/** Below `sm`, the dialog is a sheet that rises from the bottom edge. Shared with the quick-ticket dialog. */
+export const SHEET_QUERY = "(max-width: 639.98px)";
 
 /** How far, or how fast, a sheet has to be pulled down before letting go closes it. */
-const DISMISS_DISTANCE = 110;
-const DISMISS_VELOCITY = 520;
+export const DISMISS_DISTANCE = 110;
+export const DISMISS_VELOCITY = 520;
 
 export function NewTicketDialog({
   origin,
@@ -194,7 +194,7 @@ export function NewTicketDialog({
  * browser has done to reveal the focused field. A pinch-zoom shrinks the
  * visual viewport too, but that is not a keyboard and is ignored.
  */
-function useKeyboardInset(enabled: boolean) {
+export function useKeyboardInset(enabled: boolean) {
   const [state, setState] = useState<{ inset: number; height: number } | null>(null);
 
   useEffect(() => {

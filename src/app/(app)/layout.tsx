@@ -8,6 +8,7 @@ import { CommandPaletteProvider } from "@/components/shell/command-palette";
 import { LiveNotices } from "@/components/shell/live-notices";
 import { TimeZoneSync } from "@/components/shell/time-zone-sync";
 import { NewTicketProvider } from "@/components/tickets/new-ticket";
+import { QuickTicketProvider } from "@/components/quick-tickets";
 import { RouteTransition } from "@/components/motion";
 import { OPEN_STATUSES } from "@/lib/constants";
 
@@ -55,16 +56,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         departmentName={departmentName}
         isAdmin={profile.role === "admin"}
       >
-        <CommandPaletteProvider role={profile.role}>
-          <div className="flex min-h-dvh">
-            <Sidebar profile={profile} departmentName={departmentName} counts={counts} />
-            <AppBackdrop alert={counts.breached} />
-            <RouteTransition className="flex min-w-0 flex-1 flex-col">{children}</RouteTransition>
-            <RealtimeRefresh />
-            <LiveNotices viewerId={profile.id} />
-            <TimeZoneSync />
-          </div>
-        </CommandPaletteProvider>
+        {/* Inside New ticket, which its dialog hands over to when a quick
+            ticket is switched off; outside the palette, which opens it. */}
+        <QuickTicketProvider userId={profile.id} departmentName={departmentName}>
+          <CommandPaletteProvider role={profile.role}>
+            <div className="flex min-h-dvh">
+              <Sidebar profile={profile} departmentName={departmentName} counts={counts} />
+              <AppBackdrop alert={counts.breached} />
+              <RouteTransition className="flex min-w-0 flex-1 flex-col">{children}</RouteTransition>
+              <RealtimeRefresh />
+              <LiveNotices viewerId={profile.id} />
+              <TimeZoneSync />
+            </div>
+          </CommandPaletteProvider>
+        </QuickTicketProvider>
       </NewTicketProvider>
     </MobileNavProvider>
   );

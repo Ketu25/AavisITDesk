@@ -1,6 +1,11 @@
 import { z } from "zod";
 import { TICKET_PRIORITIES, TICKET_STATUSES, USER_ROLES } from "@/lib/database.types";
-import { SLA_MAX_MINUTES, TICKET_LIMITS } from "@/lib/constants";
+import {
+  QUICK_TICKET_ICONS,
+  QUICK_TICKET_LIMITS,
+  SLA_MAX_MINUTES,
+  TICKET_LIMITS,
+} from "@/lib/constants";
 
 export const createTicketSchema = z.object({
   subject: z
@@ -102,4 +107,124 @@ export const settingsSchema = z.object({
 export const allowlistSchema = z.object({
   email: z.string().trim().toLowerCase().email("That is not a valid email address."),
   note: z.string().trim().max(200).nullable().optional(),
+});
+
+// ------------------------------------------------------------ quick tickets --
+
+/** Blank means "none": an emptied field clears the column rather than storing "". */
+function optionalText(max: number, min = 1, tooShort = "That is too short.") {
+  return z.preprocess(
+    (value) => (typeof value === "string" ? value.trim() || null : value),
+    z.string().min(min, tooShort).max(max).nullable(),
+  );
+}
+
+export const quickTicketGroupSchema = z.object({
+  name: z.string().trim().min(1, "Give the group a name.").max(QUICK_TICKET_LIMITS.groupNameMax),
+  description: optionalText(QUICK_TICKET_LIMITS.groupDescriptionMax).optional(),
+  icon: z.enum(QUICK_TICKET_ICONS).optional(),
+  is_active: z.boolean().optional(),
+});
+
+export const quickTicketGroupUpdateSchema = quickTicketGroupSchema
+  .partial()
+  .refine((v) => Object.keys(v).length > 0, "Nothing to update.");
+
+const quickLabel = z
+  .string()
+  .trim()
+  .min(QUICK_TICKET_LIMITS.labelMin, "Give it a short label, like “Paper jam”.")
+  .max(QUICK_TICKET_LIMITS.labelMax);
+const quickSubject = z
+  .string()
+  .trim()
+  .min(TICKET_LIMITS.subjectMin, "Give the ticket a title.")
+  .max(TICKET_LIMITS.subjectMax);
+const quickDescription = z
+  .string()
+  .trim()
+  .min(TICKET_LIMITS.descriptionMin, "Describe the problem IT will be fixing.")
+  .max(QUICK_TICKET_LIMITS.descriptionMax);
+const quickPrompt = optionalText(
+  QUICK_TICKET_LIMITS.promptMax,
+  QUICK_TICKET_LIMITS.promptMin,
+  "Make the question a little longer.",
+);
+
+/**
+ * The columns a requester reads. Changing any of them bumps the quick
+ * ticket's revision, so an update that touches one must say which revision it
+ * was editing.
+ */
+export const QUICK_TICKET_CONTENT_FIELDS = [
+  "group_id",
+  "routing_rule_id",
+  "label",
+  "subject",
+  "description",
+  "priority",
+  "detail_prompt",
+  "detail_required",
+] as const;
+
+const requiredNeedsPrompt = (v: { detail_prompt?: string | null; detail_required?: boolean }) =>
+  !v.detail_required || Boolean(v.detail_prompt);
+const requiredNeedsPromptIssue = {
+  message: "Write the question first, or don't require an answer.",
+  path: ["detail_required"],
+};
+
+export const quickTicketCreateSchema = z
+  .object({
+    group_id: z.string().uuid("Pick a group."),
+    routing_rule_id: z.string().uuid("Pick a category."),
+    label: quickLabel,
+    subject: quickSubject,
+    description: quickDescription,
+    priority: z.enum(TICKET_PRIORITIES).default("normal"),
+    detail_prompt: quickPrompt.optional().default(null),
+    detail_required: z.boolean().default(false),
+    is_active: z.boolean().default(true),
+  })
+  .refine(requiredNeedsPrompt, requiredNeedsPromptIssue);
+
+export const quickTicketUpdateSchema = z
+  .object({
+    group_id: z.string().uuid("Pick a group.").optional(),
+    routing_rule_id: z.string().uuid("Pick a category.").optional(),
+    label: quickLabel.optional(),
+    subject: quickSubject.optional(),
+    description: quickDescription.optional(),
+    priority: z.enum(TICKET_PRIORITIES).optional(),
+    detail_prompt: quickPrompt.optional(),
+    detail_required: z.boolean().optional(),
+    is_active: z.boolean().optional(),
+    /** The revision the editor opened. Required alongside any content change. */
+    expected_revision: z.number().int().positive().optional(),
+  })
+  .refine(
+    (v) => Object.keys(v).some((key) => key !== "expected_revision"),
+    "Nothing to update.",
+  );
+
+const orderedIds = z
+  .array(z.string().uuid())
+  .max(500)
+  .refine((ids) => new Set(ids).size === ids.length, "Each item can appear only once.");
+
+/** The whole list, top to bottom — never a partial move. */
+export const quickGroupOrderSchema = z.object({ ids: orderedIds });
+export const quickTicketOrderSchema = z.object({ group_id: z.string().uuid(), ids: orderedIds });
+
+/**
+ * A requester raising one. The caps are generous on the raw text — the
+ * composer trims, collapses and clips it — and exist only to refuse a body
+ * nobody typed.
+ */
+export const raiseQuickTicketSchema = z.object({
+  quick_ticket_id: z.string().uuid(),
+  revision: z.number().int().positive(),
+  answer: z.string().max(QUICK_TICKET_LIMITS.answerMax * 4).optional().default(""),
+  note: z.string().max(QUICK_TICKET_LIMITS.noteMax * 2).optional().default(""),
+  allow_duplicate: z.boolean().optional().default(false),
 });
