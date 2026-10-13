@@ -53,8 +53,15 @@ const TONE_ATTR: Record<Tone, string | undefined> = {
   done: "emerald",
 };
 
-export function stageOf(ticket: Pick<TicketRowData, "status" | "assignee">): Stage {
+export function stageOf(
+  ticket: Pick<TicketRowData, "status" | "assignee">,
+  viewerId?: string,
+): Stage {
   const who = ticket.assignee?.full_name ?? null;
+  // An agent's own ticket can land back with them — auto-assignment does not
+  // skip the requester — and "Ketu needs your reply" said to Ketu reads as a
+  // bug, so the viewer is "you" rather than their own name.
+  const yours = viewerId !== undefined && ticket.assignee?.id === viewerId;
 
   switch (ticket.status) {
     case "new":
@@ -64,34 +71,49 @@ export function stageOf(ticket: Pick<TicketRowData, "status" | "assignee">): Sta
         index: 1,
         label: "Assigned",
         tone: "desk",
-        headline: who ? `${who} has picked it up` : "Assigned — work starts soon",
+        headline: yours
+          ? "Assigned to you"
+          : who
+            ? `${who} has picked it up`
+            : "Assigned — work starts soon",
       };
     case "in_progress":
       return {
         index: 2,
         label: "In progress",
         tone: "desk",
-        headline: who ? `${who} is working on it` : "IT is working on it",
+        headline: yours
+          ? "You're working on it"
+          : who
+            ? `${who} is working on it`
+            : "IT is working on it",
       };
     case "waiting_on_user":
       return {
         index: 2,
         label: "Waiting on you",
         tone: "you",
-        headline: `${who ?? "IT"} needs your reply`,
+        headline: yours ? "Waiting on your reply" : `${who ?? "IT"} needs your reply`,
       };
     case "reopened":
       // Reopening keeps the assignee, so the ticket is back with that person
       // rather than back at the start.
       return who
-        ? { index: 1, label: "Reopened", tone: "desk", headline: `Reopened — back with ${who}` }
+        ? {
+            index: 1,
+            label: "Reopened",
+            tone: "desk",
+            headline: yours ? "Reopened — back with you" : `Reopened — back with ${who}`,
+          }
         : { index: 0, label: "Reopened", tone: "desk", headline: "Reopened — waiting for IT to pick it up" };
     case "resolved":
       return {
         index: 3,
         label: "Resolved",
         tone: "done",
-        headline: `${who ?? "IT"} marked it fixed — does it work?`,
+        headline: yours
+          ? "You marked it fixed — confirm to close it"
+          : `${who ?? "IT"} marked it fixed — does it work?`,
       };
     case "closed":
       return { index: 4, label: "Closed", tone: "done", headline: "Closed" };
@@ -178,13 +200,15 @@ function TrackerCard({
   ticket,
   rules,
   index,
+  viewerId,
 }: {
   ticket: TicketRowData;
   rules: Partial<Record<TicketPriority, SlaRule>>;
   index: number;
+  viewerId: string;
 }) {
   const reduced = useReducedMotion();
-  const stage = stageOf(ticket);
+  const stage = stageOf(ticket, viewerId);
   const needsYou = stage.tone === "you" || ticket.status === "resolved";
 
   return (
@@ -296,18 +320,21 @@ function TrackerCard({
 }
 
 /**
- * The requester's unfinished tickets, the ones waiting on them first. `total`
+ * The viewer's own unfinished tickets, the ones waiting on them first. `total`
  * is every unfinished ticket, so the overflow line can say how many more there
- * are than the handful shown.
+ * are than the handful shown. `viewerId` is who raised them — a requester, or
+ * an agent or admin looking at their own requests.
  */
 export function ActiveTickets({
   tickets,
   rules,
   total,
+  viewerId,
 }: {
   tickets: TicketRowData[];
   rules: SlaRule[];
   total: number;
+  viewerId: string;
 }) {
   const ruleIndex = useMemo(() => indexRules(rules), [rules]);
   const more = Math.max(total - tickets.length, 0);
@@ -320,7 +347,13 @@ export function ActiveTickets({
       <ul className={cn("grid grid-cols-1 gap-3", tickets.length > 1 && "xl:grid-cols-2")}>
         <AnimatePresence initial={false} mode="popLayout">
           {tickets.map((ticket, index) => (
-            <TrackerCard key={ticket.id} ticket={ticket} rules={ruleIndex} index={index} />
+            <TrackerCard
+              key={ticket.id}
+              ticket={ticket}
+              rules={ruleIndex}
+              index={index}
+              viewerId={viewerId}
+            />
           ))}
         </AnimatePresence>
       </ul>

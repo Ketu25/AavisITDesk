@@ -10,8 +10,9 @@ import { spring, stagger } from "@/lib/motion";
 import { safeTimeZone } from "@/lib/timezone";
 
 /**
- * A requester's last year at a glance: how often they needed IT, for what, and
- * how long a fix usually takes.
+ * The tickets someone raised over the last year at a glance: how often they
+ * needed IT, for what, and how long a fix usually takes. A requester's, or an
+ * agent's or admin's own requests on the desk view.
  *
  * Months are the reader's months. A ticket raised at 1 am on the 1st in
  * Mumbai is still the 31st in UTC, so bucketing on the server's clock would
@@ -119,6 +120,8 @@ export function TicketHistory({
   serverTimeZone,
   serverNow,
   partial = false,
+  title = "Your history",
+  index = 2,
 }: {
   rows: HistoryRow[];
   /** What the server rendered with, so hydration draws the same months. */
@@ -126,6 +129,9 @@ export function TicketHistory({
   serverNow: number;
   /** The server stopped short of the whole history. */
   partial?: boolean;
+  title?: string;
+  /** Position among the page's sections, for the entrance cascade. */
+  index?: number;
 }) {
   const reduced = useReducedMotion();
   const headingId = useId();
@@ -151,10 +157,10 @@ export function TicketHistory({
   const described = summary.months.map((m) => `${m.long}: ${m.count}`).join(", ");
 
   return (
-    <Reveal index={2} role="region" aria-labelledby={headingId} className="space-y-3">
+    <Reveal index={index} role="region" aria-labelledby={headingId} className="space-y-3">
       <div className="flex items-baseline justify-between gap-3">
         <h2 id={headingId} className="eyebrow">
-          Your history
+          {title}
         </h2>
         <span className="text-[0.75rem] text-ink-faint">Last 12 months</span>
       </div>

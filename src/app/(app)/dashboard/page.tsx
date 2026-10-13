@@ -6,13 +6,13 @@ import { createClient } from "@/lib/supabase/server";
 import { PageBody, PageHeader } from "@/components/shell/page-header";
 import { Greeting } from "@/components/shell/greeting";
 import { Stat } from "@/components/ui/stat";
-import { LivePulse, Reveal, StaggerChildren } from "@/components/motion";
+import { Reveal, StaggerChildren } from "@/components/motion";
 import { EmptyState } from "@/components/ui/states";
 import { Icons } from "@/components/shell/icons";
 import { DashboardList } from "@/components/tickets/dashboard-list";
 import { NewTicketButton } from "@/components/tickets/new-ticket";
-import { ActiveTickets } from "@/components/tickets/ticket-tracker";
-import { TicketHistory, type HistoryRow } from "@/components/tickets/ticket-history";
+import { OwnTicketSections } from "@/components/tickets/own-tickets";
+import type { HistoryRow } from "@/components/tickets/ticket-history";
 import { OPEN_STATUSES } from "@/lib/constants";
 import { TICKET_SELECT } from "@/lib/queries";
 import { minutesToLabel } from "@/lib/format";
@@ -29,8 +29,8 @@ const TRACKER_LIMIT = 4;
 /** Finished tickets listed under the trackers. */
 const CLOSED_LIMIT = 5;
 
-/** An agent's own tickets, under the desk view. */
-const AGENT_PREVIEW_LIMIT = 6;
+/** The desk's open tickets nearest their SLA, on the agent view. */
+const ATTENTION_LIMIT = 6;
 
 /** Statuses where the next move is the requester's: a question to answer, or a
  *  fix to confirm. These trackers lead. */
@@ -49,7 +49,7 @@ const HISTORY_MAX_PAGES = 10;
 type Supabase = Awaited<ReturnType<typeof createClient>>;
 
 /**
- * Every ticket the requester raised in the history window, three columns each.
+ * Every ticket the viewer raised in the history window, three columns each.
  *
  * Paged rather than fetched in one go because PostgREST caps a response at its
  * `max-rows` without saying so — the same silent ceiling that once stopped
@@ -85,7 +85,21 @@ async function loadHistory(supabase: Supabase, userId: string, sinceIso: string)
   return { rows, partial: total !== null && rows.length < total };
 }
 
-async function loadRequesterOverview(supabase: Supabase, userId: string, historySince: string) {
+/**
+ * The tickets the viewer raised: trackers for the unfinished ones, the latest
+ * closed, and a year of history. Requesters see only this; agents and admins
+ * see it under the desk.
+ *
+ * Every query filters on `created_by` itself, never on row-level security
+ * alone: agents and admins can read the whole desk, so a query left to the
+ * policy would quietly turn an agent's history into everyone's.
+ */
+async function loadOwnTickets(
+  supabase: Supabase,
+  userId: string,
+  historySince: string,
+  { countOpen }: { countOpen: boolean },
+) {
   // Counted in the database rather than off a capped list: filtering a preview
   // is how "Raised in total" once stopped at six.
   const countMine = () =>
@@ -103,7 +117,8 @@ async function loadRequesterOverview(supabase: Supabase, userId: string, history
 
   const [totalRes, openRes, needsYouRes, withItRes, closedRes, history] = await Promise.all([
     countMine(),
-    countMine().in("status", OPEN_STATUSES),
+    // Only the requester's stat strip shows it; the desk view has its own.
+    countOpen ? countMine().in("status", OPEN_STATUSES) : null,
     unfinished(NEEDS_REQUESTER),
     unfinished(WITH_IT),
     supabase
@@ -121,7 +136,7 @@ async function loadRequesterOverview(supabase: Supabase, userId: string, history
 
   return {
     total: totalRes.count ?? 0,
-    open: openRes.count ?? 0,
+    open: openRes?.count ?? 0,
     awaiting: needsYouRes.count ?? needsYou.length,
     // The requester's move first, then what IT is holding; each newest-changed
     // first.
@@ -132,83 +147,50 @@ async function loadRequesterOverview(supabase: Supabase, userId: string, history
   };
 }
 
-export default async function DashboardPage() {
-  const { profile, isAgent } = await requireUser();
-  const supabase = await createClient();
-  const now = new Date();
+/** The shared queue at a glance, for agents and admins: the health strip and the
+ *  open tickets nearest their SLA. */
+async function loadDesk(supabase: Supabase, userId: string, now: Date) {
   const nowIso = now.toISOString();
-  const zone = safeTimeZone((await cookies()).get(TZ_COOKIE)?.value);
 
-  const [{ data: rules }, requester, agentMineRes] = await Promise.all([
-    supabase.from("sla_rules").select("*"),
-    isAgent
-      ? null
-      : loadRequesterOverview(
-          supabase,
-          profile.id,
-          new Date(now.getTime() - HISTORY_DAYS * 86_400_000).toISOString(),
-        ),
-    isAgent
-      ? supabase
-          .from("tickets")
-          .select(TICKET_SELECT)
-          .eq("created_by", profile.id)
-          .order("created_at", { ascending: false })
-          .limit(AGENT_PREVIEW_LIMIT)
-      : null,
-  ]);
+  const [openRes, unassignedRes, breachedRes, mineRes, attentionRes, resolvedRes] =
+    await Promise.all([
+      supabase.from("tickets").select("id", { count: "exact", head: true }).in("status", OPEN_STATUSES),
+      supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .in("status", OPEN_STATUSES)
+        .is("assigned_to", null),
+      supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .in("status", OPEN_STATUSES)
+        .is("sla_paused_at", null)
+        .lt("sla_due_at", nowIso),
+      supabase
+        .from("tickets")
+        .select("id", { count: "exact", head: true })
+        .in("status", OPEN_STATUSES)
+        .eq("assigned_to", userId),
+      supabase
+        .from("tickets")
+        .select(TICKET_SELECT)
+        .in("status", OPEN_STATUSES)
+        .order("sla_due_at", { ascending: true, nullsFirst: false })
+        .limit(ATTENTION_LIMIT),
+      supabase
+        .from("tickets")
+        .select("created_at, resolved_at")
+        .not("resolved_at", "is", null)
+        .gte("created_at", new Date(now.getTime() - 30 * 86400000).toISOString())
+        .limit(500),
+    ]);
 
-  const agentMine = (agentMineRes?.data ?? []) as unknown as TicketRowData[];
+  const durations = (resolvedRes.data ?? []).map(
+    (t) => (new Date(t.resolved_at!).getTime() - new Date(t.created_at).getTime()) / 60000,
+  );
 
-  // Agents get the queue-health strip on top of their personal view.
-  let agentStats: {
-    open: number;
-    unassigned: number;
-    breached: number;
-    mine: number;
-    avgResolution: number | null;
-  } | null = null;
-  let attention: TicketRowData[] = [];
-
-  if (isAgent) {
-    const [openRes, unassignedRes, breachedRes, mineRes, attentionRes, resolvedRes] =
-      await Promise.all([
-        supabase.from("tickets").select("id", { count: "exact", head: true }).in("status", OPEN_STATUSES),
-        supabase
-          .from("tickets")
-          .select("id", { count: "exact", head: true })
-          .in("status", OPEN_STATUSES)
-          .is("assigned_to", null),
-        supabase
-          .from("tickets")
-          .select("id", { count: "exact", head: true })
-          .in("status", OPEN_STATUSES)
-          .is("sla_paused_at", null)
-          .lt("sla_due_at", nowIso),
-        supabase
-          .from("tickets")
-          .select("id", { count: "exact", head: true })
-          .in("status", OPEN_STATUSES)
-          .eq("assigned_to", profile.id),
-        supabase
-          .from("tickets")
-          .select(TICKET_SELECT)
-          .in("status", OPEN_STATUSES)
-          .order("sla_due_at", { ascending: true, nullsFirst: false })
-          .limit(6),
-        supabase
-          .from("tickets")
-          .select("created_at, resolved_at")
-          .not("resolved_at", "is", null)
-          .gte("created_at", new Date(now.getTime() - 30 * 86400000).toISOString())
-          .limit(500),
-      ]);
-
-    const durations = (resolvedRes.data ?? []).map(
-      (t) => (new Date(t.resolved_at!).getTime() - new Date(t.created_at).getTime()) / 60000,
-    );
-
-    agentStats = {
+  return {
+    stats: {
       open: openRes.count ?? 0,
       unassigned: unassignedRes.count ?? 0,
       breached: breachedRes.count ?? 0,
@@ -216,9 +198,29 @@ export default async function DashboardPage() {
       avgResolution: durations.length
         ? Math.round(durations.reduce((a, b) => a + b, 0) / durations.length)
         : null,
-    };
-    attention = (attentionRes.data ?? []) as unknown as TicketRowData[];
-  }
+    },
+    attention: (attentionRes.data ?? []) as unknown as TicketRowData[],
+  };
+}
+
+export default async function DashboardPage() {
+  const { profile, isAgent } = await requireUser();
+  const supabase = await createClient();
+  const now = new Date();
+  const zone = safeTimeZone((await cookies()).get(TZ_COOKIE)?.value);
+
+  // One round of queries for every role. The desk's run beside the viewer's own
+  // rather than after them, so paging a long history never holds up the queue.
+  const [{ data: rules }, own, desk] = await Promise.all([
+    supabase.from("sla_rules").select("*"),
+    loadOwnTickets(
+      supabase,
+      profile.id,
+      new Date(now.getTime() - HISTORY_DAYS * 86_400_000).toISOString(),
+      { countOpen: !isAgent },
+    ),
+    isAgent ? loadDesk(supabase, profile.id, now) : null,
+  ]);
 
   const firstName = profile.full_name.trim().split(/\s+/)[0] || profile.full_name;
 
@@ -263,74 +265,83 @@ export default async function DashboardPage() {
       />
 
       <PageBody className="space-y-6">
-        {agentStats && (
-          <Reveal index={0} className="space-y-3" role="region">
-            <h2 className="eyebrow">Service desk</h2>
-            <StaggerChildren className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <Stat label="Open" value={agentStats.open} href="/queue" hint="Across all departments" />
-              <Stat
-                label="Unassigned"
-                value={agentStats.unassigned}
-                tone={agentStats.unassigned > 0 ? "amber" : undefined}
-                href="/queue?assignee=unassigned"
-                hint="Nobody working these yet"
-              />
-              <Stat
-                label="SLA breached"
-                value={agentStats.breached}
-                tone={agentStats.breached > 0 ? "rose" : "emerald"}
-                href="/queue?sla=breached"
-                hint={agentStats.breached > 0 ? "Needs attention now" : "All within target"}
-              />
-              <Stat
-                label="Assigned to me"
-                value={agentStats.mine}
-                href="/queue?assignee=me"
-                hint={
-                  agentStats.avgResolution
-                    ? `Team average ${minutesToLabel(agentStats.avgResolution)} to resolve`
-                    : "No resolutions in the last 30 days"
-                }
-              />
-            </StaggerChildren>
-          </Reveal>
-        )}
+        {desk && (
+          <>
+            <Reveal index={0} className="space-y-3" role="region">
+              <h2 className="eyebrow">Service desk</h2>
+              <StaggerChildren className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <Stat label="Open" value={desk.stats.open} href="/queue" hint="Across all departments" />
+                <Stat
+                  label="Unassigned"
+                  value={desk.stats.unassigned}
+                  tone={desk.stats.unassigned > 0 ? "amber" : undefined}
+                  href="/queue?assignee=unassigned"
+                  hint="Nobody working these yet"
+                />
+                <Stat
+                  label="SLA breached"
+                  value={desk.stats.breached}
+                  tone={desk.stats.breached > 0 ? "rose" : "emerald"}
+                  href="/queue?sla=breached"
+                  hint={desk.stats.breached > 0 ? "Needs attention now" : "All within target"}
+                />
+                <Stat
+                  label="Assigned to me"
+                  value={desk.stats.mine}
+                  href="/queue?assignee=me"
+                  hint={
+                    desk.stats.avgResolution
+                      ? `Team average ${minutesToLabel(desk.stats.avgResolution)} to resolve`
+                      : "No resolutions in the last 30 days"
+                  }
+                />
+              </StaggerChildren>
+            </Reveal>
 
-        {isAgent && attention.length > 0 && (
-          <Reveal index={1} className="space-y-3" role="region">
-            <div className="flex items-baseline justify-between">
-              <h2 className="eyebrow">Needs attention first</h2>
-              <Link
-                href="/queue"
-                className="text-[0.75rem] text-ink-muted underline-offset-4 hover:text-ink hover:underline"
-              >
-                Open queue
-              </Link>
-            </div>
-            <DashboardList tickets={attention} rules={rules ?? []} showRequester showAssignee />
-          </Reveal>
-        )}
-
-        {isAgent && (
-          <Reveal index={2} className="space-y-3" role="region">
-            <div className="flex items-baseline justify-between">
-              <h2 className="eyebrow">My tickets</h2>
-              <Link
-                href="/tickets"
-                className="text-[0.75rem] text-ink-muted underline-offset-4 hover:text-ink hover:underline"
-              >
-                See all
-              </Link>
-            </div>
-            {agentMine.length === 0 ? (
-              raiseFirst
-            ) : (
-              <DashboardList tickets={agentMine} rules={rules ?? []} showAssignee />
+            {desk.attention.length > 0 && (
+              <Reveal index={1} className="space-y-3" role="region">
+                <div className="flex items-baseline justify-between">
+                  <h2 className="eyebrow">Needs attention first</h2>
+                  <Link
+                    href="/queue"
+                    className="text-[0.75rem] text-ink-muted underline-offset-4 hover:text-ink hover:underline"
+                  >
+                    Open queue
+                  </Link>
+                </div>
+                <DashboardList
+                  tickets={desk.attention}
+                  rules={rules ?? []}
+                  showRequester
+                  showAssignee
+                />
+              </Reveal>
             )}
-          </Reveal>
+
+            {/* The agent or admin as a requester: the same trackers and history
+                a requester gets, without a second stat strip under the desk's. */}
+            {own.total === 0 ? (
+              <Reveal index={2} className="space-y-3" role="region" aria-labelledby="overview-mine">
+                <h2 id="overview-mine" className="eyebrow">
+                  My tickets
+                </h2>
+                {raiseFirst}
+              </Reveal>
+            ) : (
+              <OwnTicketSections
+                data={own}
+                rules={rules ?? []}
+                viewerId={profile.id}
+                zone={zone ?? "UTC"}
+                now={now.getTime()}
+                variant="desk"
+                from={2}
+              />
+            )}
+          </>
         )}
 
-        {requester && (
+        {!desk && (
           <>
             <Reveal index={0} className="space-y-3" role="region" aria-labelledby="overview-mine">
               <div className="flex items-baseline justify-between">
@@ -345,93 +356,29 @@ export default async function DashboardPage() {
                 </Link>
               </div>
               <StaggerChildren className="grid gap-3 sm:grid-cols-3">
-                <Stat
-                  label="Open"
-                  value={requester.open}
-                  href="/tickets"
-                  hint="Still being worked on"
-                />
+                <Stat label="Open" value={own.open} href="/tickets" hint="Still being worked on" />
                 <Stat
                   label="Waiting on you"
-                  value={requester.awaiting}
-                  tone={requester.awaiting > 0 ? "fuchsia" : undefined}
-                  hint={
-                    requester.awaiting > 0 ? "Needs your reply or confirmation" : "Nothing pending"
-                  }
+                  value={own.awaiting}
+                  tone={own.awaiting > 0 ? "fuchsia" : undefined}
+                  hint={own.awaiting > 0 ? "Needs your reply or confirmation" : "Nothing pending"}
                 />
-                <Stat label="Raised in total" value={requester.total} hint="Since you joined" />
+                <Stat label="Raised in total" value={own.total} hint="Since you joined" />
               </StaggerChildren>
             </Reveal>
 
-            {requester.total === 0 ? (
+            {own.total === 0 ? (
               <Reveal index={1}>{raiseFirst}</Reveal>
             ) : (
-              <>
-                <Reveal
-                  index={1}
-                  className="space-y-3"
-                  role="region"
-                  aria-labelledby="overview-active"
-                >
-                  <div className="flex items-baseline justify-between gap-3">
-                    <h2 id="overview-active" className="eyebrow">
-                      Active tickets
-                    </h2>
-                    {requester.activeTotal > 0 && (
-                      <LivePulse
-                        label="Updates live"
-                        className="text-[0.6875rem] text-[var(--spec-ok)]"
-                      />
-                    )}
-                  </div>
-                  {requester.activeTotal === 0 ? (
-                    <div data-tone="emerald" className="card flex items-center gap-3 p-4">
-                      <span
-                        className="flex size-9 flex-none items-center justify-center rounded-full"
-                        style={{ background: "var(--tone-bg)", color: "var(--tone-fg)" }}
-                      >
-                        <Icons.check className="size-4" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-[0.875rem] font-medium text-ink">Nothing in progress</p>
-                        <p className="mt-0.5 text-[0.8125rem] text-ink-muted text-pretty">
-                          Everything you&apos;ve raised is closed. If something else breaks, raise
-                          a new ticket.
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <ActiveTickets
-                      tickets={requester.active}
-                      rules={rules ?? []}
-                      total={requester.activeTotal}
-                    />
-                  )}
-                </Reveal>
-
-                {requester.history && (
-                  <TicketHistory
-                    rows={requester.history.rows}
-                    serverTimeZone={zone ?? "UTC"}
-                    serverNow={now.getTime()}
-                    partial={requester.history.partial}
-                  />
-                )}
-
-                {requester.closed.length > 0 && (
-                  <Reveal
-                    index={3}
-                    className="space-y-3"
-                    role="region"
-                    aria-labelledby="overview-closed"
-                  >
-                    <h2 id="overview-closed" className="eyebrow">
-                      Recently closed
-                    </h2>
-                    <DashboardList tickets={requester.closed} rules={rules ?? []} showAssignee />
-                  </Reveal>
-                )}
-              </>
+              <OwnTicketSections
+                data={own}
+                rules={rules ?? []}
+                viewerId={profile.id}
+                zone={zone ?? "UTC"}
+                now={now.getTime()}
+                variant="requester"
+                from={1}
+              />
             )}
           </>
         )}
