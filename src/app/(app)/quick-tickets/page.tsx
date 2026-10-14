@@ -52,7 +52,7 @@ export default async function QuickTicketsPage() {
     <>
       <PageHeader
         title="Quick tickets"
-        description="Common problems, already written up. Pick one, check it, and send."
+        description="Common problems, already written up. Open a group, pick the problem, and send."
         actions={
           <>
             {isAdmin && (

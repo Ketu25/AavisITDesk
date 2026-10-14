@@ -1,26 +1,28 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { motion, useReducedMotion } from "motion/react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { Highlight } from "@/components/ui/highlight";
-import { Spinner } from "@/components/ui/spinner";
 import { EmptyState } from "@/components/ui/states";
 import { Icons } from "@/components/shell/icons";
 import { NewTicketButton } from "@/components/tickets/new-ticket";
-import { PRIORITY_META } from "@/lib/constants";
-import { spring, stagger } from "@/lib/motion";
+import { ease, spring, stagger } from "@/lib/motion";
 import { SEARCH_MAX_LENGTH, fold, matchesAllTerms, parseSearchTerms } from "@/lib/search";
-import { cn } from "@/lib/utils";
 import type { QuickGroup } from "@/lib/quick-tickets";
-import { useQuickTicket, type OpenTicket } from "./context";
+import type { OpenTicket } from "./context";
+import { GroupGrid } from "./group-grid";
+import { IssueButton } from "./issue-button";
 import { QuickIcon } from "./icon";
 
 /** Past this many quick tickets, the page grows a filter box — the same point the category picker does. */
 const FILTER_THRESHOLD = 8;
+
+/** The address parameter naming the open group, so a refresh, Back, or a shared link opens it again. */
+const GROUP_PARAM = "group";
 
 const countIssues = (groups: QuickGroup[]) =>
   groups.reduce((sum, group) => sum + group.issues.length, 0);
@@ -31,10 +33,12 @@ const SECONDARY_ACTION =
 
 /**
  * The Quick tickets page: the common problems IT has already written up,
- * grouped the way people think about them. Each row opens the confirm dialog —
- * nothing is sent from here — and carries the number of a ticket the viewer
- * already has open for it, so a second report of the same jam is a decision
- * rather than an accident.
+ * grouped the way people think about them.
+ *
+ * Each group is a card; opening one lists its quick tickets in a panel under
+ * it, and each of those opens the confirm dialog — nothing is sent from here.
+ * Typing in the filter skips the cards and goes straight to the quick tickets
+ * that match, since anyone typing already knows what they are looking for.
  */
 export function QuickTicketsBoard({
   groups,
@@ -50,19 +54,49 @@ export function QuickTicketsBoard({
   failed: boolean;
 }) {
   const router = useRouter();
-  const reduced = useReducedMotion();
+  const reduced = useReducedMotion() ?? false;
   const [refreshing, startRefresh] = useTransition();
-  const { open, pendingId } = useQuickTicket();
   const filterRef = useRef<HTMLInputElement>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState("");
 
   const terms = useMemo(() => parseSearchTerms(filter), [filter]);
   const showFilter = countIssues(groups) > FILTER_THRESHOLD;
+  // Only while the box is there to clear it: a refresh can take it away with
+  // words still in it, and a filter nobody can see must not hide anything.
+  const searching = showFilter && terms.length > 0;
+
+  // The address is the one record of which group is open — kept current with
+  // replaceState, which Next folds into useSearchParams without a server
+  // round trip. A group that is not on the page counts as none.
+  const requested = useSearchParams().get(GROUP_PARAM);
+  const selectedId = requested && groups.some((group) => group.id === requested) ? requested : null;
+
+  const select = useCallback((groupId: string | null) => {
+    const params = new URLSearchParams(window.location.search);
+    if (groupId) params.set(GROUP_PARAM, groupId);
+    else params.delete(GROUP_PARAM);
+    const query = params.toString();
+    // Replace, not push: opening a card is not a page, and Back should leave
+    // the Quick tickets page rather than step through every card tried.
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+    );
+  }, []);
+
+  // A link to a group IT has since switched off, or one that went while it
+  // was open: drop it from the address so it cannot spring open later. Not
+  // when the list failed to load — then nothing can be said about it.
+  useEffect(() => {
+    if (!failed && requested && !selectedId) select(null);
+  }, [failed, requested, selectedId, select]);
 
   // An issue matches when every word is somewhere in it or its group, so
   // "printer jam" finds Paper jam under Printer.
   const visible = useMemo(() => {
-    if (terms.length === 0) return groups;
+    if (!searching) return groups;
     return groups
       .map((group) => ({
         ...group,
@@ -76,7 +110,12 @@ export function QuickTicketsBoard({
         ),
       }))
       .filter((group) => group.issues.length > 0);
-  }, [groups, terms]);
+  }, [groups, terms, searching]);
+
+  const clearFilter = () => {
+    setFilter("");
+    filterRef.current?.focus();
+  };
 
   if (failed) {
     return (
@@ -136,8 +175,10 @@ export function QuickTicketsBoard({
     );
   }
 
+  const view = { duration: 0.2, ease: ease.entrance };
+
   return (
-    <div className="space-y-4">
+    <div ref={boardRef} className="space-y-4">
       {showFilter && (
         <div className="relative max-w-md">
           <Icons.search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-ink-faint" />
@@ -149,9 +190,19 @@ export function QuickTicketsBoard({
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Escape" && filter && !event.nativeEvent.isComposing) {
+              if (event.nativeEvent.isComposing) return;
+              if (event.key === "Escape" && filter) {
                 event.stopPropagation();
                 setFilter("");
+              } else if (event.key === "ArrowDown") {
+                // Down from the box to the first thing it is filtering.
+                const first = boardRef.current?.querySelector<HTMLElement>(
+                  '[data-view="results"] button[aria-haspopup="dialog"], [data-view="cards"] [data-card]',
+                );
+                if (first) {
+                  event.preventDefault();
+                  first.focus();
+                }
               }
             }}
             maxLength={SEARCH_MAX_LENGTH}
@@ -165,10 +216,7 @@ export function QuickTicketsBoard({
           {filter && (
             <button
               type="button"
-              onClick={() => {
-                setFilter("");
-                filterRef.current?.focus();
-              }}
+              onClick={clearFilter}
               aria-label="Clear filter"
               // Not `tap-safe`: it sets `position: relative`, which would
               // override `absolute` and drop this into the flow.
@@ -181,129 +229,126 @@ export function QuickTicketsBoard({
       )}
 
       <p aria-live="polite" className="sr-only">
-        {terms.length > 0
+        {searching
           ? countIssues(visible) === 1
             ? "1 quick ticket matches."
             : `${countIssues(visible)} quick tickets match.`
           : ""}
       </p>
 
-      {visible.length === 0 ? (
-        <div className="card px-4 py-8 text-center">
-          <p className="text-[0.8125rem] font-medium text-ink">Nothing matches &ldquo;{filter.trim()}&rdquo;</p>
-          <p className="mt-1 text-xs text-ink-faint">
-            Try another word,{" "}
-            <button
-              type="button"
-              onClick={() => {
-                setFilter("");
-                filterRef.current?.focus();
-              }}
-              className="font-medium text-accent underline-offset-4 hover:underline"
+      {/* Sized by the room the board actually gets, not the window: the
+          sidebar takes a different share at every breakpoint. */}
+      <div className="@container">
+        <AnimatePresence mode="wait" initial={false}>
+          {searching ? (
+            <motion.div
+              key="results"
+              data-view="results"
+              initial={reduced ? { opacity: 0 } : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, transition: { duration: 0.1, ease: ease.exit } }}
+              transition={view}
             >
-              show every quick ticket
-            </button>
-            , or{" "}
-            <NewTicketButton className="font-medium text-accent underline-offset-4 hover:underline">
-              raise a ticket
-            </NewTicketButton>
-            .
-          </p>
-        </div>
-      ) : (
-        // Sized by the room the board actually gets, not the window: the
-        // sidebar takes a different share at every breakpoint.
-        <div className="@container">
-          <ul className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
-            {visible.map((group, index) => (
-              <motion.li
-                key={group.id}
-                initial={reduced ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ ...spring.gentle, delay: reduced ? 0 : stagger(index, 0.04, 8) }}
-                aria-labelledby={`quick-group-${group.id}`}
-                className="card flex min-w-0 flex-col p-2"
-              >
-                <div className="flex items-center gap-2.5 px-2 pb-2 pt-1.5">
-                  <span className="flex size-8 flex-none items-center justify-center rounded-[9px] border border-line bg-surface text-ink-muted">
-                    <QuickIcon name={group.icon} className="size-4" />
-                  </span>
-                  <div className="min-w-0">
-                    <h2
-                      id={`quick-group-${group.id}`}
-                      className="truncate text-[0.875rem] font-semibold tracking-tight text-ink"
+              {visible.length === 0 ? (
+                <div className="card px-4 py-8 text-center">
+                  <p className="text-[0.8125rem] font-medium text-ink">
+                    Nothing matches &ldquo;{filter.trim()}&rdquo;
+                  </p>
+                  <p className="mt-1 text-xs text-ink-faint">
+                    Try another word,{" "}
+                    <button
+                      type="button"
+                      onClick={clearFilter}
+                      className="font-medium text-accent underline-offset-4 hover:underline"
                     >
-                      <Highlight text={group.name} terms={terms} />
-                    </h2>
-                    {group.description && (
-                      <p className="truncate text-[0.6875rem] text-ink-faint">{group.description}</p>
-                    )}
-                  </div>
+                      show every quick ticket
+                    </button>
+                    , or{" "}
+                    <NewTicketButton className="font-medium text-accent underline-offset-4 hover:underline">
+                      raise a ticket
+                    </NewTicketButton>
+                    .
+                  </p>
                 </div>
+              ) : (
+                <Results groups={visible} openByIssue={openByIssue} terms={terms} reduced={reduced} />
+              )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key="cards"
+              data-view="cards"
+              initial={reduced ? { opacity: 0 } : { opacity: 0, y: 4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, transition: { duration: 0.1, ease: ease.exit } }}
+              transition={view}
+            >
+              <GroupGrid
+                groups={groups}
+                openByIssue={openByIssue}
+                selectedId={selectedId}
+                onSelect={select}
+                onTypeAhead={showFilter ? () => filterRef.current?.focus() : undefined}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
 
-                <ul className="space-y-px border-t border-line pt-1.5">
-                  {group.issues.map((issue) => {
-                    const existing = openByIssue[issue.id] ?? null;
-                    const sending = pendingId === issue.id;
-                    const raised = issue.startsAt === "urgent" || issue.startsAt === "high";
-                    return (
-                      <li key={issue.id}>
-                        <button
-                          type="button"
-                          aria-haspopup="dialog"
-                          aria-label={
-                            `${issue.label}, ${group.name}` +
-                            (existing ? `. You already reported this as ${existing.ticket_number}.` : "")
-                          }
-                          aria-busy={sending || undefined}
-                          onClick={(event) =>
-                            open(issue, { trigger: event.currentTarget, knownOpen: existing })
-                          }
-                          className={cn(
-                            "group flex min-h-11 w-full items-center gap-2 rounded-[9px] px-2 text-left lg:min-h-9",
-                            "text-[0.8125rem] text-ink transition-colors duration-150 hover:bg-surface-hover",
-                          )}
-                        >
-                          <span className="min-w-0 flex-1 truncate">
-                            <Highlight text={issue.label} terms={terms} />
-                          </span>
-                          {raised && (
-                            <span
-                              aria-hidden
-                              data-tone={PRIORITY_META[issue.startsAt].tone}
-                              title={`Starts ${PRIORITY_META[issue.startsAt].label.toLowerCase()}`}
-                              className="tone-dot flex-none"
-                            />
-                          )}
-                          {existing && (
-                            <span
-                              aria-hidden
-                              title="You reported this and it's still open"
-                              className="readout flex-none rounded border border-line bg-surface-sunk px-1.5 text-[0.625rem] leading-4 text-ink-faint"
-                            >
-                              {existing.ticket_number}
-                            </span>
-                          )}
-                          {sending ? (
-                            <Spinner className="size-3.5 flex-none text-ink-faint" />
-                          ) : (
-                            <Icons.arrowRight
-                              className={cn(
-                                "size-3.5 flex-none text-ink-faint transition-[opacity,transform] duration-150",
-                                "opacity-40 group-hover:translate-x-0.5 group-hover:opacity-100 group-focus-visible:opacity-100",
-                              )}
-                            />
-                          )}
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </motion.li>
+/** What the filter found: every group with a match, already open, the matching words marked. */
+function Results({
+  groups,
+  openByIssue,
+  terms,
+  reduced,
+}: {
+  groups: QuickGroup[];
+  openByIssue: Record<string, OpenTicket>;
+  terms: string[];
+  reduced: boolean;
+}) {
+  return (
+    <ul className="grid gap-3 @xl:grid-cols-2 @4xl:grid-cols-3">
+      {groups.map((group, index) => (
+        <motion.li
+          key={group.id}
+          initial={reduced ? { opacity: 0 } : { opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...spring.gentle, delay: reduced ? 0 : stagger(index, 0.04, 8) }}
+          aria-labelledby={`quick-results-${group.id}`}
+          className="card flex min-w-0 flex-col p-2"
+        >
+          <div className="flex items-center gap-2.5 px-2 pb-2 pt-1.5">
+            <span className="flex size-8 flex-none items-center justify-center rounded-[9px] border border-line bg-surface text-ink-muted">
+              <QuickIcon name={group.icon} className="size-4" />
+            </span>
+            <div className="min-w-0">
+              <h2
+                id={`quick-results-${group.id}`}
+                className="truncate text-[0.875rem] font-semibold tracking-tight text-ink"
+              >
+                <Highlight text={group.name} terms={terms} />
+              </h2>
+              {group.description && (
+                <p className="truncate text-[0.6875rem] text-ink-faint">
+                  <Highlight text={group.description} terms={terms} />
+                </p>
+              )}
+            </div>
+          </div>
+
+          <ul className="space-y-px border-t border-line pt-1.5">
+            {group.issues.map((issue) => (
+              <li key={issue.id}>
+                <IssueButton issue={issue} existing={openByIssue[issue.id] ?? null} terms={terms} />
+              </li>
             ))}
           </ul>
-        </div>
-      )}
-    </div>
+        </motion.li>
+      ))}
+    </ul>
   );
 }
