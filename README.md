@@ -414,6 +414,11 @@ Common problems written up once by an admin — *Printer → Paper jam*,
 *Shared drive → Drive not showing* — that anyone can report from **Quick
 tickets** in the sidebar, or by typing in ⌘K.
 
+- **Groups first.** The page shows each group as a card; opening one lists its
+  quick tickets in a panel under its row. The open group is kept in the address
+  (`/quick-tickets?group=<id>`), so a refresh or Back reopens it and IT can
+  link straight to one. Typing in the filter skips the cards and lists the
+  matching quick tickets directly.
 - **Nothing is sent on one tap.** Picking one opens a confirmation showing
   exactly what IT will receive: title, details, category, urgency, department.
   The requester can add a note, and answers the admin's question if the quick
