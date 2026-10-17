@@ -26,14 +26,21 @@ export function TimeAgo({
 
   if (!value) return <span className={className}>—</span>;
 
+  // Everything shown here has already happened, so a time ahead of the clock
+  // is "now", not "in 12 seconds": the shared clock only ticks every 15
+  // seconds, and the database's clock is not the browser's, so a ticket sent a
+  // moment ago can carry a timestamp the page's reading has not reached yet.
+  const at = Date.parse(value);
+  const reading = now === null ? null : Number.isNaN(at) ? now : Math.max(now, at);
+
   return (
     <time
       dateTime={value}
-      title={now === null ? undefined : absoluteTime(value)}
+      title={reading === null ? undefined : absoluteTime(value)}
       className={className}
       suppressHydrationWarning
     >
-      {now === null ? relativeTime(value) : relativeTime(value, now)}
+      {reading === null ? relativeTime(value) : relativeTime(value, reading)}
     </time>
   );
 }

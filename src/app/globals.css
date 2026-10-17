@@ -517,6 +517,118 @@
   animation: aavis-pen var(--aavis-mark-dur) linear infinite;
 }
 
+
+/* ===========================================================================
+   Quick tickets — glyphs, the pointer light, and the paper plane.
+
+   Glyphs: each quick-ticket group icon (<QuickIcon>) acts out its problem once
+   when whatever it sits in — a `.glyph-host` — is hovered or takes focus, or
+   as it arrives when the host is marked [data-play]. The printer feeds a
+   sheet, the envelope opens, the phone rings. Played once per visit and never
+   on a loop: the animations are only applied while the host is hot, so
+   leaving and coming back plays it again from the start, and a page left open
+   all day costs nothing. Every part's resting state is the plain icon, and
+   none of it applies to anyone who asked for less motion.
+   =========================================================================== */
+.qg-sheet, .qg-folder, .qg-envelope, .qg-handset, .qg-shield, .qg-wrench, .qg-bolt, .qg-screen {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.qg-bar { transform-box: fill-box; transform-origin: 0 50%; }
+/* Pivots in the icon's own 20×20 grid: the lid's hinge, the flap's crease, the key's bow. */
+.qg-lid  { transform-box: view-box; transform-origin: 2.8px 9px; }
+.qg-flap { transform-box: view-box; transform-origin: 10px 5.6px; }
+.qg-key  { transform-box: view-box; transform-origin: 7px 12.8px; }
+
+@keyframes qg-feed   { 0%, 100% { transform: none; } 30% { transform: translateY(-1px); } 65% { transform: translateY(1.8px); } }
+@keyframes qg-blink  { 0%, 50%, 100% { opacity: 1; } 25%, 75% { opacity: 0.15; } }
+@keyframes qg-lid    { 0%, 100% { transform: none; } 35%, 60% { transform: rotate(-16deg); } }
+@keyframes qg-settle { 0%, 100% { transform: none; } 40% { transform: translateY(0.6px); } }
+@keyframes qg-signal { 0% { opacity: 0.15; } 55%, 100% { opacity: 1; } }
+@keyframes qg-flap   { 0%, 100% { transform: none; } 30%, 65% { transform: scaleY(-0.85); } }
+@keyframes qg-power  { 0% { opacity: 0; transform: scaleY(0.08); } 25% { opacity: 0.45; transform: scaleY(0.08); } 50% { opacity: 0.3; transform: none; } 100% { opacity: 0; transform: none; } }
+@keyframes qg-ring   { 0%, 100% { transform: none; } 15% { transform: rotate(-14deg); } 30% { transform: rotate(12deg); } 45% { transform: rotate(-9deg); } 60% { transform: rotate(6deg); } 75% { transform: rotate(-3deg); } }
+@keyframes qg-waves  { 0%, 100% { opacity: 0; } 20%, 40% { opacity: 1; } 55% { opacity: 0.2; } 70% { opacity: 1; } }
+@keyframes qg-turn   { 0%, 100% { transform: none; } 40% { transform: rotate(-24deg); } 70% { transform: rotate(8deg); } }
+@keyframes qg-draw   { 0%, 25% { stroke-dashoffset: 1; } 100% { stroke-dashoffset: 0; } }
+@keyframes qg-swell  { 0%, 100% { transform: none; } 40% { transform: scale(1.1); } }
+@keyframes qg-load   { 0% { opacity: 0; transform: scaleX(0); } 20% { opacity: 1; } 60% { opacity: 1; transform: none; } 100% { opacity: 0; transform: none; } }
+@keyframes qg-twist  { 0%, 100% { transform: none; } 35% { transform: rotate(-28deg); } 70% { transform: rotate(10deg); } }
+@keyframes qg-flash  { 0%, 100% { fill-opacity: 0; transform: none; } 30% { fill-opacity: 0.9; transform: scale(1.14); } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .glyph-host:is(:hover, :focus-within, [data-play]) :is(
+    .qg-sheet, .qg-led, .qg-lid, .qg-folder, .qg-arc, .qg-flap, .qg-envelope, .qg-screen,
+    .qg-handset, .qg-waves, .qg-key, .qg-check, .qg-shield, .qg-dot, .qg-bar, .qg-wrench, .qg-bolt
+  ) {
+    animation-duration: 0.9s;
+    animation-timing-function: var(--ease-standard);
+    animation-fill-mode: both;
+  }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-sheet    { animation-name: qg-feed; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-led      { animation-name: qg-blink; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-lid      { animation-name: qg-lid; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-folder   { animation-name: qg-settle; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-arc      { animation-name: qg-signal; animation-duration: 0.5s; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-arc-2    { animation-delay: 0.12s; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-arc-3    { animation-delay: 0.24s; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-flap     { animation-name: qg-flap; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-envelope { animation-name: qg-settle; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-screen   { animation-name: qg-power; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-handset  { animation-name: qg-ring; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-waves    { animation-name: qg-waves; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-key      { animation-name: qg-turn; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-check    { animation-name: qg-draw; stroke-dasharray: 1; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-shield   { animation-name: qg-swell; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-dot      { animation-name: qg-blink; animation-duration: 0.6s; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-dot-2    { animation-delay: 0.1s; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-bar      { animation-name: qg-load; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-bar-2    { animation-delay: 0.12s; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-wrench   { animation-name: qg-twist; }
+  .glyph-host:is(:hover, :focus-within, [data-play]) .qg-bolt     { animation-name: qg-flash; }
+}
+
+/* The pointer light. The card grid writes the pointer's position into every
+   card (--spot-x / --spot-y, in the card's own pixels; useSpotlight) and
+   marks itself [data-spot] while the pointer is over it. Every card's edge
+   catches the light near the pointer and the card under it takes a faint
+   wash, so it reads as one lamp moving over the board rather than a hover
+   state per card. Mouse and trackpad only; on touch there is no pointer. */
+.spot-ring,
+.spot-wash {
+  position: absolute;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-slow) var(--ease-standard);
+}
+.spot-ring {
+  inset: -1px;
+  padding: 1px;
+  background: radial-gradient(15rem circle at var(--spot-x, -100rem) var(--spot-y, -100rem), var(--accent), transparent 70%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.spot-wash {
+  inset: 0;
+  background: radial-gradient(22rem circle at var(--spot-x, -100rem) var(--spot-y, -100rem), var(--accent-soft), transparent 65%);
+}
+@media (hover: hover) and (pointer: fine) {
+  [data-spot] .spot-ring { opacity: 0.75; }
+  [data-spot] .quick-tile:hover .spot-wash { opacity: 1; }
+}
+
+/* Send to IT: the plane leaves up and to the right while the request is in
+   flight and a fresh one slides in behind it, inside its own clipped box. */
+@keyframes quick-plane {
+  0%   { transform: none; opacity: 1; }
+  45%  { transform: translate(10px, -10px); opacity: 0; }
+  46%  { transform: translate(-10px, 10px); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+.quick-plane-flying { animation: quick-plane 1.1s var(--ease-standard) infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
