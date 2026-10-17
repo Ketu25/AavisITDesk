@@ -414,16 +414,26 @@ Common problems written up once by an admin — *Printer → Paper jam*,
 *Shared drive → Drive not showing* — that anyone can report from **Quick
 tickets** in the sidebar, or by typing in ⌘K.
 
-- **Groups first.** The page shows each group as a card; opening one lists its
-  quick tickets in a panel under its row. The open group is kept in the address
+- **Groups first.** The page shows each group as a card of the same size,
+  however many quick tickets it holds. Opening one grows the card into a
+  pop-up over the page listing them as tiles (a bottom sheet on a phone);
+  closing shrinks it back into the card. The open group is kept in the address
   (`/quick-tickets?group=<id>`), so a refresh or Back reopens it and IT can
-  link straight to one. Typing in the filter skips the cards and lists the
-  matching quick tickets directly.
-- **Nothing is sent on one tap.** Picking one opens a confirmation showing
-  exactly what IT will receive: title, details, category, urgency, department.
-  The requester can add a note, and answers the admin's question if the quick
-  ticket has one ("Which printer?"). The answer is added to the ticket title,
-  so five paper-jam tickets can still be told apart in the queue.
+  link straight to one. Arrow keys move between cards and between tiles. Past
+  eight quick tickets a filter box appears; typing in it skips the cards and
+  lists the matching quick tickets directly.
+- **Your open reports first.** Above the cards, the requester's unfinished
+  tickets raised from quick tickets, each with how far along it is and whose
+  move it is, updating live — so the jam reported this morning is seen before
+  it is reported again.
+- **Nothing is sent on one tap.** Picking one moves the pop-up on to a short
+  confirmation, with a way back to the list (from ⌘K or the filter it opens as
+  a dialog of its own). It shows the title IT will receive, its category and
+  urgency, with the department and full details one press away. The requester can add a
+  note, and answers the admin's question if the quick ticket has one ("Which
+  printer?"); with no question, Send has focus and Enter sends. The answer is
+  added to the ticket title, so five paper-jam tickets can still be told apart
+  in the queue.
 - **Routing is unchanged.** A quick ticket points at a routing rule by id, so
   its tickets are assigned, prioritised (a category's default still lifts
   Normal) and notified exactly like any other.

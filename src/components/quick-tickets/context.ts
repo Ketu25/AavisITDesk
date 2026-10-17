@@ -36,13 +36,35 @@ export type QuickSubmission =
 
 export type QuickDraft = { answer: string; note: string };
 
+/** The quick ticket someone has picked and is looking at before sending. */
+export type QuickSession = {
+  /** Fresh per pick, so nothing from the last one carries over. */
+  key: number;
+  issue: QuickIssue;
+  /** Set when IT edited the quick ticket while it was on screen. */
+  changed: boolean;
+  /** What the page already knew about an open ticket for it. */
+  knownOpen: OpenTicket | null;
+  /**
+   * Shown inside a group's pop-up, as its next step, rather than in the
+   * confirm dialog of its own. The pop-up draws it; the provider draws nothing.
+   */
+  embedded: boolean;
+};
+
 export type QuickTicketContextValue = {
   userId: string;
   departmentName: string | null;
   open: (
     issue: QuickIssue,
-    options?: { trigger?: HTMLElement | null; knownOpen?: OpenTicket | null },
+    options?: { trigger?: HTMLElement | null; knownOpen?: OpenTicket | null; embedded?: boolean },
   ) => void;
+  /** The pick being looked at, wherever it is drawn. */
+  session: QuickSession | null;
+  /** Put the pick down — the dialog closes, or a pop-up goes back to its list. */
+  close: () => void;
+  /** The quick ticket whose confirm dialog is open, if any. */
+  activeId: string | null;
   /** The quick ticket being sent right now, if any. */
   pendingId: string | null;
   submission: QuickSubmission;

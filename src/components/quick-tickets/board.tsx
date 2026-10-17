@@ -17,6 +17,7 @@ import type { OpenTicket } from "./context";
 import { GroupGrid } from "./group-grid";
 import { IssueButton } from "./issue-button";
 import { QuickIcon } from "./icon";
+import { OpenReports, iconsByIssue, type OpenReport } from "./open-reports";
 
 /** Past this many quick tickets, the page grows a filter box — the same point the category picker does. */
 const FILTER_THRESHOLD = 8;
@@ -32,23 +33,27 @@ const SECONDARY_ACTION =
   "text-[0.8125rem] font-medium text-ink transition-colors hover:bg-surface-hover";
 
 /**
- * The Quick tickets page: the common problems IT has already written up,
- * grouped the way people think about them.
+ * The Quick tickets page: what the viewer already reported and is waiting on,
+ * then the common problems IT has written up, grouped the way people think
+ * about them.
  *
- * Each group is a card; opening one lists its quick tickets in a panel under
- * it, and each of those opens the confirm dialog — nothing is sent from here.
- * Typing in the filter skips the cards and goes straight to the quick tickets
- * that match, since anyone typing already knows what they are looking for.
+ * Each group is a card of the same size however many quick tickets it holds;
+ * opening one lists them in a panel under its row, and each of those opens
+ * the confirm dialog — nothing is sent from here. Typing in the filter skips
+ * the cards and goes straight to the quick tickets that match, since anyone
+ * typing already knows what they are looking for.
  */
 export function QuickTicketsBoard({
   groups,
-  openByIssue,
+  reports,
+  viewerId,
   isAdmin,
   failed,
 }: {
   groups: QuickGroup[];
-  /** The viewer's newest unfinished ticket per quick ticket. */
-  openByIssue: Record<string, OpenTicket>;
+  /** The viewer's unfinished tickets raised from quick tickets, newest first. */
+  reports: OpenReport[];
+  viewerId: string;
   isAdmin: boolean;
   /** The list could not be read; say so rather than claim there is nothing. */
   failed: boolean;
@@ -61,6 +66,17 @@ export function QuickTicketsBoard({
   const [filter, setFilter] = useState("");
 
   const terms = useMemo(() => parseSearchTerms(filter), [filter]);
+
+  // Newest first from the server, so the first seen per quick ticket is the
+  // one to point at.
+  const openByIssue = useMemo(() => {
+    const byIssue: Record<string, OpenTicket> = {};
+    for (const report of reports) {
+      byIssue[report.quick_ticket_id] ??= { id: report.id, ticket_number: report.ticket_number };
+    }
+    return byIssue;
+  }, [reports]);
+  const iconByIssue = useMemo(() => iconsByIssue(groups), [groups]);
   const showFilter = countIssues(groups) > FILTER_THRESHOLD;
   // Only while the box is there to clear it: a refresh can take it away with
   // words still in it, and a filter nobody can see must not hide anything.
@@ -148,29 +164,32 @@ export function QuickTicketsBoard({
 
   if (groups.length === 0) {
     return (
-      <div className="card overflow-hidden">
-        <EmptyState
-          icon={<Icons.bolt />}
-          title="No quick tickets yet"
-          description={
-            isAdmin
-              ? "Write up the problems people report most — a paper jam, a missing drive — and they appear here, ready to send."
-              : "IT hasn't written any up yet. For anything that's wrong, raise a ticket — it only takes a minute."
-          }
-          action={
-            isAdmin ? (
-              <Link href="/admin/quick-tickets" className={SECONDARY_ACTION}>
-                <Icons.wrench className="size-3.5" />
-                Set up quick tickets
-              </Link>
-            ) : (
-              <NewTicketButton className={SECONDARY_ACTION}>
-                <Icons.plus className="size-3.5" />
-                New ticket
-              </NewTicketButton>
-            )
-          }
-        />
+      <div className="space-y-7">
+        <OpenReports reports={reports} iconByIssue={iconByIssue} viewerId={viewerId} />
+        <div className="card overflow-hidden">
+          <EmptyState
+            icon={<Icons.bolt />}
+            title="No quick tickets yet"
+            description={
+              isAdmin
+                ? "Write up the problems people report most — a paper jam, a missing drive — and they appear here, ready to send."
+                : "IT hasn't written any up yet. For anything that's wrong, raise a ticket — it only takes a minute."
+            }
+            action={
+              isAdmin ? (
+                <Link href="/admin/quick-tickets" className={SECONDARY_ACTION}>
+                  <Icons.wrench className="size-3.5" />
+                  Set up quick tickets
+                </Link>
+              ) : (
+                <NewTicketButton className={SECONDARY_ACTION}>
+                  <Icons.plus className="size-3.5" />
+                  New ticket
+                </NewTicketButton>
+              )
+            }
+          />
+        </div>
       </div>
     );
   }
@@ -178,122 +197,131 @@ export function QuickTicketsBoard({
   const view = { duration: 0.2, ease: ease.entrance };
 
   return (
-    <div ref={boardRef} className="space-y-4">
-      {showFilter && (
-        <div className="relative max-w-md">
-          <Icons.search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-ink-faint" />
-          <Input
-            ref={filterRef}
-            type="text"
-            role="searchbox"
-            aria-label="Filter quick tickets"
-            value={filter}
-            onChange={(event) => setFilter(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.nativeEvent.isComposing) return;
-              if (event.key === "Escape" && filter) {
-                event.stopPropagation();
-                setFilter("");
-              } else if (event.key === "ArrowDown") {
-                // Down from the box to the first thing it is filtering.
-                const first = boardRef.current?.querySelector<HTMLElement>(
-                  '[data-view="results"] button[aria-haspopup="dialog"], [data-view="cards"] [data-card]',
-                );
-                if (first) {
-                  event.preventDefault();
-                  first.focus();
-                }
-              }
-            }}
-            maxLength={SEARCH_MAX_LENGTH}
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-            enterKeyHint="search"
-            placeholder="Filter — try “toner” or “drive”"
-            className="pl-8 pr-9"
-          />
-          {filter && (
-            <button
-              type="button"
-              onClick={clearFilter}
-              aria-label="Clear filter"
-              // Not `tap-safe`: it sets `position: relative`, which would
-              // override `absolute` and drop this into the flow.
-              className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-ink-faint transition-colors hover:bg-surface-hover hover:text-ink"
-            >
-              <Icons.close className="size-3.5" />
-            </button>
+    <div ref={boardRef} className="space-y-7">
+      <OpenReports reports={reports} iconByIssue={iconByIssue} viewerId={viewerId} />
+
+      <section aria-labelledby="quick-problems" className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+          <h2 id="quick-problems" className="eyebrow">
+            Common problems
+          </h2>
+          {showFilter && (
+            <div className="relative w-full sm:w-72">
+              <Icons.search className="pointer-events-none absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-ink-faint" />
+              <Input
+                ref={filterRef}
+                type="text"
+                role="searchbox"
+                aria-label="Filter quick tickets"
+                value={filter}
+                onChange={(event) => setFilter(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.nativeEvent.isComposing) return;
+                  if (event.key === "Escape" && filter) {
+                    event.stopPropagation();
+                    setFilter("");
+                  } else if (event.key === "ArrowDown") {
+                    // Down from the box to the first thing it is filtering.
+                    const first = boardRef.current?.querySelector<HTMLElement>(
+                      '[data-view="results"] button[aria-haspopup="dialog"], [data-view="cards"] [data-card]',
+                    );
+                    if (first) {
+                      event.preventDefault();
+                      first.focus();
+                    }
+                  }
+                }}
+                maxLength={SEARCH_MAX_LENGTH}
+                autoComplete="off"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="search"
+                placeholder="Filter — try “toner” or “drive”"
+                className="pl-8 pr-9"
+              />
+              {filter && (
+                <button
+                  type="button"
+                  onClick={clearFilter}
+                  aria-label="Clear filter"
+                  // Not `tap-safe`: it sets `position: relative`, which would
+                  // override `absolute` and drop this into the flow.
+                  className="absolute right-1.5 top-1/2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-ink-faint transition-colors hover:bg-surface-hover hover:text-ink"
+                >
+                  <Icons.close className="size-3.5" />
+                </button>
+              )}
+            </div>
           )}
         </div>
-      )}
 
-      <p aria-live="polite" className="sr-only">
-        {searching
-          ? countIssues(visible) === 1
-            ? "1 quick ticket matches."
-            : `${countIssues(visible)} quick tickets match.`
-          : ""}
-      </p>
+        <p aria-live="polite" className="sr-only">
+          {searching
+            ? countIssues(visible) === 1
+              ? "1 quick ticket matches."
+              : `${countIssues(visible)} quick tickets match.`
+            : ""}
+        </p>
 
-      {/* Sized by the room the board actually gets, not the window: the
-          sidebar takes a different share at every breakpoint. */}
-      <div className="@container">
-        <AnimatePresence mode="wait" initial={false}>
-          {searching ? (
-            <motion.div
-              key="results"
-              data-view="results"
-              initial={reduced ? { opacity: 0 } : { opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, transition: { duration: 0.1, ease: ease.exit } }}
-              transition={view}
-            >
-              {visible.length === 0 ? (
-                <div className="card px-4 py-8 text-center">
-                  <p className="text-[0.8125rem] font-medium text-ink">
-                    Nothing matches &ldquo;{filter.trim()}&rdquo;
-                  </p>
-                  <p className="mt-1 text-xs text-ink-faint">
-                    Try another word,{" "}
-                    <button
-                      type="button"
-                      onClick={clearFilter}
-                      className="font-medium text-accent underline-offset-4 hover:underline"
-                    >
-                      show every quick ticket
-                    </button>
-                    , or{" "}
-                    <NewTicketButton className="font-medium text-accent underline-offset-4 hover:underline">
-                      raise a ticket
-                    </NewTicketButton>
-                    .
-                  </p>
-                </div>
-              ) : (
-                <Results groups={visible} openByIssue={openByIssue} terms={terms} reduced={reduced} />
-              )}
-            </motion.div>
-          ) : (
-            <motion.div
-              key="cards"
-              data-view="cards"
-              initial={reduced ? { opacity: 0 } : { opacity: 0, y: 4 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, transition: { duration: 0.1, ease: ease.exit } }}
-              transition={view}
-            >
-              <GroupGrid
-                groups={groups}
-                openByIssue={openByIssue}
-                selectedId={selectedId}
-                onSelect={select}
-                onTypeAhead={showFilter ? () => filterRef.current?.focus() : undefined}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+        {/* Sized by the room the board actually gets, not the window: the
+            sidebar takes a different share at every breakpoint. */}
+        <div className="@container">
+          <AnimatePresence mode="wait" initial={false}>
+            {searching ? (
+              <motion.div
+                key="results"
+                data-view="results"
+                initial={reduced ? { opacity: 0 } : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.1, ease: ease.exit } }}
+                transition={view}
+              >
+                {visible.length === 0 ? (
+                  <div className="card px-4 py-8 text-center">
+                    <p className="text-[0.8125rem] font-medium text-ink">
+                      Nothing matches &ldquo;{filter.trim()}&rdquo;
+                    </p>
+                    <p className="mt-1 text-xs text-ink-faint">
+                      Try another word,{" "}
+                      <button
+                        type="button"
+                        onClick={clearFilter}
+                        className="font-medium text-accent underline-offset-4 hover:underline"
+                      >
+                        show every quick ticket
+                      </button>
+                      , or{" "}
+                      <NewTicketButton className="font-medium text-accent underline-offset-4 hover:underline">
+                        raise a ticket
+                      </NewTicketButton>
+                      .
+                    </p>
+                  </div>
+                ) : (
+                  <Results groups={visible} openByIssue={openByIssue} terms={terms} reduced={reduced} />
+                )}
+              </motion.div>
+            ) : (
+              <motion.div
+                key="cards"
+                data-view="cards"
+                initial={reduced ? { opacity: 0 } : { opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, transition: { duration: 0.1, ease: ease.exit } }}
+                transition={view}
+              >
+                <GroupGrid
+                  groups={groups}
+                  openByIssue={openByIssue}
+                  selectedId={selectedId}
+                  onSelect={select}
+                  onTypeAhead={showFilter ? () => filterRef.current?.focus() : undefined}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </section>
     </div>
   );
 }
@@ -319,19 +347,19 @@ function Results({
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...spring.gentle, delay: reduced ? 0 : stagger(index, 0.04, 8) }}
           aria-labelledby={`quick-results-${group.id}`}
-          className="card flex min-w-0 flex-col p-2"
+          className="glyph-host card flex min-w-0 flex-col p-2"
         >
           <div className="flex items-center gap-2.5 px-2 pb-2 pt-1.5">
             <span className="flex size-8 flex-none items-center justify-center rounded-[9px] border border-line bg-surface text-ink-muted">
               <QuickIcon name={group.icon} className="size-4" />
             </span>
             <div className="min-w-0">
-              <h2
+              <h3
                 id={`quick-results-${group.id}`}
                 className="truncate text-[0.875rem] font-semibold tracking-tight text-ink"
               >
                 <Highlight text={group.name} terms={terms} />
-              </h2>
+              </h3>
               {group.description && (
                 <p className="truncate text-[0.6875rem] text-ink-faint">
                   <Highlight text={group.description} terms={terms} />

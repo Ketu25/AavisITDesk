@@ -10,10 +10,10 @@ import type { QuickIssue } from "@/lib/quick-tickets";
 import {
   QuickTicketContext,
   type CreatedTicket,
-  type OpenTicket,
   type Origin,
   type QuickDraft,
   type QuickFailure,
+  type QuickSession,
   type QuickSubmission,
   type QuickTicketContextValue,
 } from "./context";
@@ -27,13 +27,15 @@ const QuickTicketDialog = dynamic(() => import("./dialog").then((m) => m.QuickTi
 });
 
 /**
- * Raising a quick ticket from wherever one is offered — the Quick tickets
- * page, or ⌘K.
+ * Raising a quick ticket from wherever one is offered — a group's pop-up on
+ * the Quick tickets page, the page's filter results, or ⌘K.
  *
  * Picking one opens a short confirmation: the requester sees exactly what IT
- * will receive, answers the admin's question if there is one, and sends. The
- * open dialog, the submission and anything typed live here, above the dialog,
- * for the same reasons as the new-ticket dialog's provider:
+ * will receive, answers the admin's question if there is one, and sends. From
+ * a group's pop-up the confirmation is that pop-up's next step (`embedded`),
+ * drawn by the pop-up; anywhere else it is a dialog drawn here. Either way the
+ * pick, the submission and anything typed live here, above both, for the
+ * same reasons as the new-ticket dialog's provider:
  *
  * - The dialog unmounts when closed, but a request in flight must not. Its
  *   result still lands, and is announced with a toast if nothing is on screen
@@ -43,15 +45,9 @@ const QuickTicketDialog = dynamic(() => import("./dialog").then((m) => m.QuickTi
  *   the ticket is sent.
  */
 
-type Session = {
-  /** A fresh dialog per open, so nothing from the last one carries over. */
-  key: number;
-  issue: QuickIssue;
+type Session = QuickSession & {
+  /** Where the standalone dialog grows from. */
   origin: Origin | null;
-  /** Set when IT edited the quick ticket while it was on screen. */
-  changed: boolean;
-  /** What the Quick tickets page already knew about an open ticket for it. */
-  knownOpen: OpenTicket | null;
 };
 
 const IDLE: QuickSubmission = { status: "idle" };
@@ -124,6 +120,7 @@ export function QuickTicketProvider({
         origin,
         changed: false,
         knownOpen: options?.knownOpen ?? null,
+        embedded: options?.embedded ?? false,
       });
     },
     [push],
@@ -218,12 +215,30 @@ export function QuickTicketProvider({
   }, []);
 
   const pendingId = submission.status === "pending" ? submission.issueId : null;
+  const activeId = session?.issue.id ?? null;
+  // What consumers read of the session: the dialog's origin is the provider's business.
+  const shared = useMemo<QuickSession | null>(
+    () =>
+      session
+        ? {
+            key: session.key,
+            issue: session.issue,
+            changed: session.changed,
+            knownOpen: session.knownOpen,
+            embedded: session.embedded,
+          }
+        : null,
+    [session],
+  );
 
   const value = useMemo<QuickTicketContextValue>(
     () => ({
       userId,
       departmentName,
       open,
+      session: shared,
+      close,
+      activeId,
       pendingId,
       submission,
       submit,
@@ -231,7 +246,20 @@ export function QuickTicketProvider({
       getDraft,
       setDraft,
     }),
-    [userId, departmentName, open, pendingId, submission, submit, clearSubmission, getDraft, setDraft],
+    [
+      userId,
+      departmentName,
+      open,
+      shared,
+      close,
+      activeId,
+      pendingId,
+      submission,
+      submit,
+      clearSubmission,
+      getDraft,
+      setDraft,
+    ],
   );
 
   return (
@@ -243,7 +271,8 @@ export function QuickTicketProvider({
           setSubmission((s) => (s.status === "success" || s.status === "error" ? IDLE : s))
         }
       >
-        {session && (
+        {/* A pick shown inside a group's pop-up is drawn there instead. */}
+        {session && !session.embedded && (
           <QuickTicketDialog
             key={session.key}
             issue={session.issue}
