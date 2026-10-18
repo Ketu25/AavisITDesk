@@ -6,10 +6,10 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useRef } from "react";
 import { Wordmark } from "./logo";
 import { Icons } from "./icons";
-import { ThemeToggle } from "./theme-toggle";
 import { MOBILE_NAV_ID, useMobileNav } from "./mobile-nav";
 import { CommandPaletteTrigger } from "./command-palette";
 import { NewTicketButton } from "@/components/tickets/new-ticket";
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useEscape, useFocusTrap, useScrollLock } from "@/components/ui/use-overlay";
@@ -114,7 +114,7 @@ export function Sidebar({
           <Wordmark />
         </Link>
         <div className="flex items-center gap-0.5">
-          <ThemeToggle />
+          <AnimatedThemeToggler />
           {scope === "mobile" && (
             <button
               type="button"
