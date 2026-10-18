@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { PageBody, PageHeader } from "@/components/shell/page-header";
+import { Icons } from "@/components/shell/icons";
 import { QuickTicketsAdmin, type QuickUsage } from "@/components/admin/quick-tickets-admin";
 
 export const metadata: Metadata = { title: "Quick ticket setup" };
@@ -48,8 +50,17 @@ export default async function AdminQuickTicketsPage() {
       <PageHeader
         title="Quick ticket setup"
         description="Common problems, written up once, that requesters report in a couple of taps."
+        actions={
+          <Link
+            href="/quick-tickets"
+            className="inline-flex h-8 items-center gap-1.5 rounded-[9px] px-2.5 text-[0.8125rem] font-medium text-ink-muted transition-colors hover:bg-surface-hover hover:text-ink"
+          >
+            <Icons.bolt className="size-3.5" />
+            Requester view
+          </Link>
+        }
       />
-      <PageBody className="max-w-4xl">
+      <PageBody>
         <QuickTicketsAdmin
           groups={groupsRes.data ?? []}
           items={itemsRes.data ?? []}
