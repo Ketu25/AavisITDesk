@@ -122,6 +122,17 @@
   color-scheme: dark;
 }
 
+/* The theme switch (AnimatedThemeToggler) grows the new theme out of the
+   button as a circle over a still picture of the old one. The browser's
+   default cross-fade would fade that picture out underneath the circle, so it
+   is off for the length of the switch — and only then, so any other view
+   transition keeps the default. */
+:root[data-theme-reveal]::view-transition-old(root),
+:root[data-theme-reveal]::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
 @theme inline {
   --color-canvas:        var(--canvas);
   --color-canvas-raised: var(--canvas-raised);
