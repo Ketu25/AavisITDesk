@@ -450,7 +450,14 @@ tickets** in the sidebar, or by typing in ⌘K.
   store a copy of the text, so editing a quick ticket never rewrites one sent.
 
 Admins manage groups and quick tickets in **Administration → Quick ticket
-setup**, which also shows how often each one is used.
+setup**, laid out the way requesters see them: one card per group, with
+whether it is live and how often its quick tickets are used, and a card at the
+end for adding a group. A card's menu moves the group earlier or later, hides
+or shows it, and opens its details or deletes it. Opening a card grows it into
+the same kind of pop-up requesters get, where its quick tickets are reordered,
+switched live or hidden, added and edited; the editor and the group's own
+details slide in inside the pop-up, and leaving either with unsaved changes
+asks first.
 
 ---
 
