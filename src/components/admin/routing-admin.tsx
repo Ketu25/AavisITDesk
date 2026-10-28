@@ -1,7 +1,6 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, Reorder, useDragControls } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -20,15 +19,7 @@ function sameOrder(a: readonly string[], b: readonly string[]) {
   return a.length === b.length && a.every((id, i) => id === b[i]);
 }
 
-export function RoutingAdmin({
-  rules,
-  agents,
-  autoAssignStrategy,
-}: {
-  rules: RoutingRule[];
-  agents: Agent[];
-  autoAssignStrategy: string;
-}) {
+export function RoutingAdmin({ rules, agents }: { rules: RoutingRule[]; agents: Agent[] }) {
   const router = useRouter();
   const { push } = useToast();
 
@@ -148,32 +139,6 @@ export function RoutingAdmin({
 
   return (
     <StaggerChildren className="space-y-4">
-      <div className="card p-4">
-        <p className="text-[0.8125rem] leading-relaxed text-ink-muted">
-          When a ticket is created the matching rule runs first: it can raise the priority and
-          hand the ticket straight to a named agent. If no default owner is set, the queue-wide
-          strategy takes over — currently{" "}
-          <span className="font-medium text-ink">
-            {autoAssignStrategy === "off"
-              ? "manual assignment only"
-              : autoAssignStrategy.replace("_", " ")}
-          </span>
-          .{" "}
-          <Link
-            href="/admin/settings"
-            className="text-accent underline-offset-4 hover:underline"
-          >
-            Change that in Settings
-          </Link>
-          .
-        </p>
-        <p className="mt-2 text-[0.8125rem] leading-relaxed text-ink-muted">
-          Requesters see the categories in the order below. Drag a card by its handle, or use
-          the arrows, to change it. Hidden categories keep their place for when they go live
-          again.
-        </p>
-      </div>
-
       <form
         onSubmit={(event) => {
           event.preventDefault();
