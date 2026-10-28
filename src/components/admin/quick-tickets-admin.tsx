@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AnimatePresence, motion, useIsPresent, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
@@ -275,8 +274,6 @@ export function QuickTicketsAdmin({
 
   return (
     <div className="space-y-7">
-      <About />
-
       <section aria-labelledby="quick-setup-groups" className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
           <h2 id="quick-setup-groups" className="eyebrow">
@@ -376,41 +373,6 @@ export function QuickTicketsAdmin({
           />
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-/** What quick tickets are, for whoever is setting them up. */
-function About() {
-  return (
-    <div className="card flex gap-3.5 p-4">
-      <span
-        aria-hidden
-        className="hidden size-9 flex-none items-center justify-center rounded-[10px] border border-line bg-surface-sunk text-ink-muted sm:flex"
-      >
-        <Icons.bolt className="size-4" />
-      </span>
-      <div className="max-w-3xl space-y-2 text-[0.8125rem] leading-relaxed text-ink-muted">
-        <p>
-          Requesters see live groups on the{" "}
-          <Link href="/quick-tickets" className="text-accent underline-offset-4 hover:underline">
-            Quick tickets
-          </Link>{" "}
-          page in the sidebar and in{" "}
-          <kbd className="readout rounded border border-line bg-surface-sunk px-1 text-[0.6875rem]">⌘K</kbd>.
-          Picking one shows them exactly what IT will receive — the title, details, category and
-          urgency you write here — and they send it after a check. Nothing is sent on a single tap.
-        </p>
-        <p>
-          Give a quick ticket a question, like &ldquo;Which printer?&rdquo;, and the answer lands in
-          the ticket&apos;s title so IT can tell the reports apart. Tickets route by their category,
-          the same as any other — see{" "}
-          <Link href="/admin/routing" className="text-accent underline-offset-4 hover:underline">
-            Routing
-          </Link>
-          .
-        </p>
-      </div>
     </div>
   );
 }
