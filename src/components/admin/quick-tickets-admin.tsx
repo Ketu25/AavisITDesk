@@ -317,6 +317,7 @@ export function QuickTicketsAdmin({
                   busy={busy}
                   reduced={reduced}
                   onOpen={(view) => select(group.id, view)}
+                  onLabels={() => router.push(`/admin/quick-tickets?labels=${group.id}`)}
                   onMove={(delta) => {
                     const ids = groupOrder.move(group.id, delta);
                     if (ids) {
@@ -393,6 +394,7 @@ function GroupCard({
   busy,
   reduced,
   onOpen,
+  onLabels,
   onMove,
   onToggle,
   onKeyDown,
@@ -413,6 +415,8 @@ function GroupCard({
   busy: string | null;
   reduced: boolean;
   onOpen: (view: GroupPopupStart) => void;
+  /** To the QR label printer, with this group picked. */
+  onLabels: () => void;
   onMove: (delta: -1 | 1) => void;
   onToggle: (live: boolean) => void;
   onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => void;
@@ -442,6 +446,14 @@ function GroupCard({
 
   const menu: MenuItem[] = [
     { label: "Edit name and icon", onSelect: () => onOpen("details") },
+    {
+      label: "Print QR labels…",
+      hint:
+        reachable === 0
+          ? "Requesters can't see this group yet — a label scanned now says it isn't in use."
+          : "Labels to stick where these problems happen.",
+      onSelect: onLabels,
+    },
     { separator: true },
     {
       label: "Move earlier",

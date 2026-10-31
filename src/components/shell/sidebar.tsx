@@ -78,6 +78,11 @@ export function Sidebar({
                 tone: counts.breached > 0 ? ("danger" as const) : undefined,
               },
               { href: "/reports", label: "Reports", icon: "reports" as const },
+              // Agents print the groups' QR labels there; editing them stays
+              // an admin's, whose link is under Administration instead.
+              ...(isAdmin
+                ? []
+                : [{ href: "/admin/quick-tickets", label: "Quick ticket setup", icon: "wrench" as const }]),
             ],
           },
         ]

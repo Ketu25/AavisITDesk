@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { misconfiguredMessage, readPublicEnv } from "@/lib/env";
+import { safeNextPath } from "@/lib/safe-next";
 
 /** Paths reachable without a session. Everything else requires one. */
 const PUBLIC_PATHS = [
@@ -68,14 +69,25 @@ export async function proxy(request: NextRequest) {
 
     const url = request.nextUrl.clone();
     url.pathname = "/login";
-    if (pathname !== "/") url.searchParams.set("next", pathname);
+    // Sign-in gets `next` and nothing else: the rest of the query belongs to
+    // the page that was asked for, and /login reads some of the same names
+    // (an `?error=` there shows a notice). It travels inside `next` instead,
+    // so a scanned QR label's `/q/…?at=…`, or a link to one quick-ticket
+    // group, still lands where it pointed once signed in.
+    url.search = "";
+    const next = `${pathname}${request.nextUrl.search}`;
+    if (next !== "/") url.searchParams.set("next", next);
     return NextResponse.redirect(url);
   }
 
   if (user && (pathname === "/login" || pathname === "/")) {
+    // Already signed in — in another tab, say — on a sign-in page that was
+    // taking someone somewhere: take them there, not to the Overview.
+    const next = pathname === "/login" ? safeNextPath(request.nextUrl.searchParams.get("next")) : null;
     const url = request.nextUrl.clone();
-    url.pathname = "/dashboard";
-    url.search = "";
+    const target = new URL(next ?? "/dashboard", url.origin);
+    url.pathname = target.pathname;
+    url.search = target.search;
     return NextResponse.redirect(url);
   }
 

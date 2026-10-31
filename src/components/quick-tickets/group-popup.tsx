@@ -6,6 +6,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Icons } from "@/components/shell/icons";
 import { useNewTicket } from "@/components/tickets/new-ticket";
 import { PRIORITY_META } from "@/lib/constants";
+import { labelPrefill } from "@/lib/qr-labels";
 import { ease, spring, stagger } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import type { QuickGroup, QuickIssue } from "@/lib/quick-tickets";
@@ -39,6 +40,7 @@ import { useSpotlight } from "./spotlight";
 export function GroupPopup({
   group,
   openByIssue,
+  location = null,
   getCard,
   onClose,
   onHide,
@@ -46,6 +48,12 @@ export function GroupPopup({
   group: QuickGroup;
   /** The viewer's newest unfinished ticket per quick ticket. */
   openByIssue: Record<string, OpenTicket>;
+  /**
+   * Where the QR label that opened this group is stuck ("HP LaserJet · 2nd
+   * floor"), when it says. Shown under the name, and what each quick ticket
+   * picked from here starts out filled in with.
+   */
+  location?: string | null;
   /** The group's card on the page, which the pop-up grows out of and lands back in. */
   getCard: (groupId: string) => HTMLElement | null;
   /** Close the pop-up: the board takes the group out of the address. */
@@ -133,6 +141,7 @@ export function GroupPopup({
             issue={step.issue}
             changed={step.changed}
             knownOpen={step.knownOpen}
+            prefill={location ? labelPrefill(step.issue, location) : undefined}
             onClose={onClose}
             onBack={back}
             containerRef={view.panelRef}
@@ -148,6 +157,7 @@ export function GroupPopup({
           <ListView
             group={group}
             openByIssue={openByIssue}
+            location={location}
             activeId={activeId}
             pendingId={pendingId}
             titleId={listTitle}
@@ -183,6 +193,7 @@ export function Preload() {
 function ListView({
   group,
   openByIssue,
+  location,
   activeId,
   pendingId,
   titleId,
@@ -203,6 +214,7 @@ function ListView({
 }: {
   group: QuickGroup;
   openByIssue: Record<string, OpenTicket>;
+  location: string | null;
   activeId: string | null;
   pendingId: string | null;
   titleId: string;
@@ -299,6 +311,13 @@ function ListView({
           {group.description && (
             <p id={hintId} className="mt-0.5 break-words text-[0.8125rem] text-ink-muted text-pretty">
               {group.description}
+            </p>
+          )}
+          {location && (
+            <p className="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-md border border-line bg-surface-sunk px-2 py-1 text-xs text-ink-muted">
+              <Icons.pin className="size-3.5 flex-none text-accent" />
+              <span className="sr-only">From the label at </span>
+              <span className="min-w-0 break-words">{location}</span>
             </p>
           )}
         </motion.div>

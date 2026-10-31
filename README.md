@@ -229,7 +229,7 @@ npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
 Without it the app still runs, but user provisioning is disabled and the People
 page says so.
 
-### Three things to change once the domain is live
+### Four things to change once the domain is live
 
 1. **Supabase → Authentication → URL Configuration** — set Site URL to the
    production host and add `https://<host>/**` to Redirect URLs, or password
@@ -241,6 +241,9 @@ page says so.
    Supabase's Redirect URLs. The `/activate` link shown in the credentials
    panel does *not* use it: that is derived from the admin's own browser
    origin, so it is always correct without configuration.
+4. **QR labels** — every code is printed with `NEXT_PUBLIC_SITE_URL` as it was
+   at the time. Print labels after the move, or keep the old host answering:
+   a label already stuck on a printer cannot be updated.
 
 ### Known caveat
 
@@ -259,7 +262,7 @@ Roles are additive and stored as one field on the user record.
 | Role | Can do |
 |---|---|
 | `user` | Submit tickets (including quick tickets), track and comment on their own, confirm or reopen a resolution |
-| `agent` | Everything a user can, plus work the shared queue: assign, re-prioritise, change status, leave internal notes, see reports |
+| `agent` | Everything a user can, plus work the shared queue: assign, re-prioritise, change status, leave internal notes, see reports, print QR labels for quick-ticket groups |
 | `admin` | Everything an agent can, plus invite/deprovision people, manage departments, SLA rules, routing rules, quick tickets and settings |
 
 Agents and admins raise their own tickets exactly like anyone else.
@@ -458,6 +461,41 @@ the same kind of pop-up requesters get, where its quick tickets are reordered,
 switched live or hidden, added and edited; the editor and the group's own
 details slide in inside the pop-up, and leaving either with unsaved changes
 asks first.
+
+Agents get **Service desk → Quick ticket setup** too, read-only: the groups
+requesters can use, and their QR labels.
+
+### QR labels
+
+A sticker for a group, stuck where its problems happen — on the printer, by
+the meeting-room screen. Scanning it with a phone camera opens Quick tickets
+with that group already open, so a paper jam is a scan and a tap.
+
+- **Printing.** Quick ticket setup → **QR labels** (`/admin/quick-tickets?labels`),
+  or *Print QR labels…* on a group card's menu; agents and admins both can.
+  Each line is a group, an optional "where it goes" ("HP LaserJet · 2nd
+  floor") and how many; Enter in "where it goes" starts the next line. Sheets
+  are Avery 5160 / 8160 — US Letter, 30 labels of 1″ × 2⅝″ — printed straight
+  from the browser at real size. Any spots on the first sheet can be picked —
+  say 1 and 7 on one that's been used before — and labels fill them top to
+  bottom in the order listed; with none picked they fill from spot 1, and any
+  that don't fit go on fresh sheets from the top. Label outlines plus a
+  millimetre nudge (remembered per browser) are there for a test on plain
+  paper. Print at 100% / "Actual size" with
+  headers and footers off. Chrome, Edge, Firefox and Safari 18.2+ honour the
+  page size; older Safari adds its own margins and the printer warns about it.
+- **What a code holds.** `NEXT_PUBLIC_SITE_URL` + `/q/<group id>`, and
+  `?at=<where it goes>` when the label says. Printing stores nothing — the
+  address is everything — so a label survives a rename, and stops working when
+  its group is deleted or switched off: whoever scans it is told so and shown
+  every other quick ticket instead. Hidden groups can be labelled ahead of time
+  (admins only), with a warning.
+- **Scanning.** `/q/<group>` needs a session like everything else. The first
+  scan on a phone goes through sign-in and comes back to the group, query and
+  all — and through choosing a password, for someone on a temporary one. The
+  label's location answers the quick ticket's question ("Which printer?"),
+  which also puts it in the ticket's title, or starts the note when there is
+  no question; the requester sees it and can change it.
 
 ---
 

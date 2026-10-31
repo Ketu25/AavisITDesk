@@ -31,7 +31,7 @@ import { OPEN_STATUSES, PRIORITY_META, QUICK_TICKET_LIMITS } from "@/lib/constan
 import { composeQuickTicket, oneLine, type QuickIssue } from "@/lib/quick-tickets";
 import { ease } from "@/lib/motion";
 import { cn } from "@/lib/utils";
-import { useQuickTicket, type OpenTicket, type Origin } from "./context";
+import { useQuickTicket, type OpenTicket, type Origin, type QuickDraft } from "./context";
 import { QuickIcon } from "./icon";
 
 /** Clicks this soon after opening are the tail of whatever opened it — a double click on the row. */
@@ -225,6 +225,7 @@ export function ConfirmStep({
   issue,
   changed,
   knownOpen,
+  prefill,
   onClose,
   onBack,
   containerRef,
@@ -239,6 +240,12 @@ export function ConfirmStep({
   issue: QuickIssue;
   changed: boolean;
   knownOpen: OpenTicket | null;
+  /**
+   * What the answer and note start as when nothing is drafted for this quick
+   * ticket yet — the location on a scanned QR label. On screen and editable
+   * like anything typed; anything already typed wins.
+   */
+  prefill?: QuickDraft;
   /** Ends it all: Done, and Raise a ticket instead. Cancel too, when there is nothing to go back to. */
   onClose: () => void;
   /** Inside a pop-up: back to the group's list, from the header's arrow, Back, and Escape. */
@@ -273,8 +280,12 @@ export function ConfirmStep({
   // pop-up going back — so nothing here grabs focus after that.
   const present = useIsPresent();
 
-  const [answer, setAnswer] = useState(() => getDraft(issue.id).answer);
-  const [note, setNote] = useState(() => getDraft(issue.id).note);
+  const [start] = useState(() => {
+    const draft = getDraft(issue.id);
+    return draft.answer || draft.note || !prefill ? draft : prefill;
+  });
+  const [answer, setAnswer] = useState(start.answer);
+  const [note, setNote] = useState(start.note);
   const [answerError, setAnswerError] = useState<string | null>(null);
   /** Undefined while the check is running. */
   const [existing, setExisting] = useState<OpenTicket | null | undefined>(knownOpen ?? undefined);
