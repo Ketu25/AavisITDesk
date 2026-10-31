@@ -73,21 +73,29 @@ const PAGES: PageItem[] = [
   },
   { href: "/profile", label: "Profile", icon: "people", keywords: "account password me" },
 ];
+// Quick ticket setup is here rather than under admin: agents open it too, to
+// print the groups' QR labels — admins are agents, so it is listed once.
 const AGENT_PAGES: PageItem[] = [
   { href: "/queue", label: "Queue", icon: "queue", keywords: "desk inbox open unassigned work" },
   { href: "/reports", label: "Reports", icon: "reports", keywords: "charts stats analytics numbers" },
-];
-const ADMIN_PAGES: PageItem[] = [
-  { href: "/admin/users", label: "People", icon: "people", keywords: "users invite accounts staff" },
-  { href: "/admin/departments", label: "Departments", icon: "building", keywords: "teams org" },
-  { href: "/admin/sla", label: "SLA rules", icon: "clock", keywords: "targets service level" },
-  { href: "/admin/routing", label: "Routing", icon: "route", keywords: "categories assignment" },
   {
     href: "/admin/quick-tickets",
     label: "Quick ticket setup",
     icon: "wrench",
     keywords: "quick tickets manage common issues templates presets groups",
   },
+  {
+    href: "/admin/quick-tickets?labels",
+    label: "QR labels",
+    icon: "qr",
+    keywords: "print qr code barcode labels stickers avery 5160 scan printer",
+  },
+];
+const ADMIN_PAGES: PageItem[] = [
+  { href: "/admin/users", label: "People", icon: "people", keywords: "users invite accounts staff" },
+  { href: "/admin/departments", label: "Departments", icon: "building", keywords: "teams org" },
+  { href: "/admin/sla", label: "SLA rules", icon: "clock", keywords: "targets service level" },
+  { href: "/admin/routing", label: "Routing", icon: "route", keywords: "categories assignment" },
   { href: "/admin/settings", label: "Settings", icon: "settings", keywords: "notifications teams email config" },
 ];
 

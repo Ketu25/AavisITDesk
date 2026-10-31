@@ -31,7 +31,12 @@ const STRENGTH = [
   { label: "Strong", tone: "bg-[#10b981]" },
 ];
 
-export function ActivateClient() {
+export function ActivateClient({
+  next,
+}: {
+  /** Where to go once activated, already checked to stay on this site. */
+  next: string | null;
+}) {
   const router = useRouter();
 
   const [stage, setStage] = useState<Stage>("checking");
@@ -160,7 +165,7 @@ export function ActivateClient() {
       return;
     }
 
-    router.push("/dashboard");
+    router.push(next ?? "/dashboard");
     router.refresh();
   }
 

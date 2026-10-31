@@ -215,6 +215,30 @@ export const Icons = {
       <path d="M12.7 3.1a3.9 3.9 0 0 0-4 5.2l-5.3 5.3a1.6 1.6 0 0 0 2.3 2.3l5.3-5.3a3.9 3.9 0 0 0 5.2-4l-2.3 2.3-2-.5-.5-2 2.3-2.3h-1Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
     </svg>
   ),
+  qr: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? base} aria-hidden>
+      <rect x="3" y="3" width="5.4" height="5.4" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="11.6" y="3" width="5.4" height="5.4" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="3" y="11.6" width="5.4" height="5.4" rx="1.2" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M11.8 11.8h1.6M16.2 11.8v1.6M11.8 15.2v2M14.6 16.4h2.4M14.6 14.2h.01"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  ),
+  pin: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? base} aria-hidden>
+      <path
+        d="M10 17.4s-5.2-4.7-5.2-8.9a5.2 5.2 0 0 1 10.4 0c0 4.2-5.2 8.9-5.2 8.9Z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <circle cx="10" cy="8.5" r="1.9" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  ),
   alert: ({ className }: IconProps) => (
     <svg viewBox="0 0 20 20" fill="none" className={className ?? base} aria-hidden>
       <path d="M10 7.2v3.4m0 2.6h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />

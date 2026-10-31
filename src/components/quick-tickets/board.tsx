@@ -12,6 +12,7 @@ import { Icons } from "@/components/shell/icons";
 import { NewTicketButton } from "@/components/tickets/new-ticket";
 import { ease, spring, stagger } from "@/lib/motion";
 import { SEARCH_MAX_LENGTH, fold, matchesAllTerms, parseSearchTerms } from "@/lib/search";
+import { LABEL_PARAM, cleanLocation } from "@/lib/qr-labels";
 import type { QuickGroup } from "@/lib/quick-tickets";
 import type { OpenTicket } from "./context";
 import { GroupGrid } from "./group-grid";
@@ -27,6 +28,26 @@ const GROUP_PARAM = "group";
 
 const countIssues = (groups: QuickGroup[]) =>
   groups.reduce((sum, group) => sum + group.issues.length, 0);
+
+/**
+ * Names the open group in the address, or none. Replace, not push: opening a
+ * card is not a page, and Back should leave the Quick tickets page rather
+ * than step through every card tried.
+ */
+function writeAddress(groupId: string | null) {
+  const params = new URLSearchParams(window.location.search);
+  if (groupId) params.set(GROUP_PARAM, groupId);
+  else params.delete(GROUP_PARAM);
+  // A label speaks for the group it opened, and only while that stays open:
+  // once it closes, nothing is pre-filled from it again.
+  params.delete(LABEL_PARAM);
+  const query = params.toString();
+  window.history.replaceState(
+    null,
+    "",
+    `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+  );
+}
 
 const SECONDARY_ACTION =
   "inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-line-strong bg-surface px-3 " +
@@ -85,29 +106,34 @@ export function QuickTicketsBoard({
   // The address is the one record of which group is open — kept current with
   // replaceState, which Next folds into useSearchParams without a server
   // round trip. A group that is not on the page counts as none.
-  const requested = useSearchParams().get(GROUP_PARAM);
+  const searchParams = useSearchParams();
+  const requested = searchParams.get(GROUP_PARAM);
   const selectedId = requested && groups.some((group) => group.id === requested) ? requested : null;
+  // Arrived by scanning a QR label: where the label is stuck, if it says,
+  // for the group it opened. Checked again here — it came from an address.
+  const labelParam = searchParams.get(LABEL_PARAM);
+  const labelLocation = labelParam ? cleanLocation(labelParam) : "";
+
+  // A scanned label whose group is no longer offered — switched off, or
+  // deleted since it was printed. Decided once, on arrival: the address is
+  // tidied up straight after, and the notice has to outlive that.
+  const [missedLabel, setMissedLabel] = useState(
+    () => labelParam !== null && !failed && selectedId === null,
+  );
 
   const select = useCallback((groupId: string | null) => {
-    const params = new URLSearchParams(window.location.search);
-    if (groupId) params.set(GROUP_PARAM, groupId);
-    else params.delete(GROUP_PARAM);
-    const query = params.toString();
-    // Replace, not push: opening a card is not a page, and Back should leave
-    // the Quick tickets page rather than step through every card tried.
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
-    );
+    // Opening a group is moving on from a label that pointed nowhere.
+    if (groupId) setMissedLabel(false);
+    writeAddress(groupId);
   }, []);
 
   // A link to a group IT has since switched off, or one that went while it
-  // was open: drop it from the address so it cannot spring open later. Not
-  // when the list failed to load — then nothing can be said about it.
+  // was open: drop it from the address so it cannot spring open later — and
+  // a label along with it. Not when the list failed to load — then nothing
+  // can be said about it.
   useEffect(() => {
-    if (!failed && requested && !selectedId) select(null);
-  }, [failed, requested, selectedId, select]);
+    if (!failed && (requested || labelParam !== null) && !selectedId) writeAddress(null);
+  }, [failed, requested, labelParam, selectedId]);
 
   // An issue matches when every word is somewhere in it or its group, so
   // "printer jam" finds Paper jam under Printer.
@@ -162,9 +188,12 @@ export function QuickTicketsBoard({
     );
   }
 
+  const labelNotice = missedLabel ? <MissedLabel onDismiss={() => setMissedLabel(false)} /> : null;
+
   if (groups.length === 0) {
     return (
       <div className="space-y-7">
+        {labelNotice}
         <OpenReports reports={reports} iconByIssue={iconByIssue} viewerId={viewerId} />
         <div className="card overflow-hidden">
           <EmptyState
@@ -198,6 +227,7 @@ export function QuickTicketsBoard({
 
   return (
     <div ref={boardRef} className="space-y-7">
+      {labelNotice}
       <OpenReports reports={reports} iconByIssue={iconByIssue} viewerId={viewerId} />
 
       <section aria-labelledby="quick-problems" className="space-y-3">
@@ -314,6 +344,7 @@ export function QuickTicketsBoard({
                   groups={groups}
                   openByIssue={openByIssue}
                   selectedId={selectedId}
+                  labelLocation={labelLocation || null}
                   onSelect={select}
                   onTypeAhead={showFilter ? () => filterRef.current?.focus() : undefined}
                 />
@@ -322,6 +353,40 @@ export function QuickTicketsBoard({
           </AnimatePresence>
         </div>
       </section>
+    </div>
+  );
+}
+
+/**
+ * Said instead of opening anything, when the QR label someone just scanned
+ * points at a group that is no longer offered — so they are not left
+ * wondering why they got every quick ticket rather than the label's.
+ */
+function MissedLabel({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <div
+      role="status"
+      data-tone="amber"
+      className="flex items-start gap-3 rounded-[14px] border border-[var(--tone-bd)] bg-[var(--tone-bg)] py-3 pl-4 pr-2"
+    >
+      <Icons.qr className="mt-0.5 size-4 flex-none text-[var(--tone-fg)]" />
+      <div className="min-w-0 flex-1">
+        <p className="text-[0.8125rem] font-medium text-[var(--tone-fg)]">
+          The label you scanned isn&apos;t in use any more
+        </p>
+        <p className="mt-0.5 text-xs leading-relaxed text-ink-muted text-pretty">
+          IT has switched off the quick tickets it pointed to. Pick your problem from what&apos;s
+          here, or raise a ticket — and let IT know the label needs replacing.
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={onDismiss}
+        aria-label="Dismiss"
+        className="tap-safe -mt-0.5 flex size-7 flex-none items-center justify-center rounded-md text-ink-faint transition-colors hover:bg-surface-hover hover:text-ink"
+      >
+        <Icons.close className="size-3.5" />
+      </button>
     </div>
   );
 }

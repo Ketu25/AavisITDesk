@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
+import { safeNextPath } from "@/lib/safe-next";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/field";
 import { cn } from "@/lib/utils";
@@ -47,12 +48,7 @@ export function LoginForm({
 
     // A disabled account can still authenticate; the server guard signs it
     // straight back out, so let the destination page make that call.
-    // A leading "//" is protocol-relative — the browser reads //evil.example
-    // as an absolute URL, so "starts with a slash" is not on its own a test
-    // for "stays on this site".
-    const safeNext =
-      next && next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
-    router.push(safeNext);
+    router.push(safeNextPath(next) ?? "/dashboard");
     router.refresh();
   }
 

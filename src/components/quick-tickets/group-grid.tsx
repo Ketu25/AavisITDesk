@@ -45,6 +45,7 @@ export function GroupGrid({
   groups,
   openByIssue,
   selectedId,
+  labelLocation,
   onSelect,
   onTypeAhead,
 }: {
@@ -52,6 +53,8 @@ export function GroupGrid({
   openByIssue: Record<string, OpenTicket>;
   /** One of `groups`, or null. */
   selectedId: string | null;
+  /** Where the QR label that opened the selected group is stuck, when one did and it says. */
+  labelLocation: string | null;
   onSelect: (groupId: string | null) => void;
   /** A printable key pressed on a card: hand it to the filter box, if there is one. */
   onTypeAhead?: () => void;
@@ -171,6 +174,7 @@ export function GroupGrid({
             key={selected.id}
             group={selected}
             openByIssue={openByIssue}
+            location={labelLocation}
             getCard={getCard}
             onClose={close}
             onHide={onHide}
