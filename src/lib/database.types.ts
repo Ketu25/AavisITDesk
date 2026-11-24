@@ -196,6 +196,44 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["sla_rules"]["Row"]>;
         Relationships: [];
       };
+      ticket_attachments: {
+        Row: {
+          comment_id: string; created_at: string; file_name: string; height: number | null;
+          id: string; mime_type: string; position: number; size_bytes: number;
+          storage_path: string; ticket_id: string; uploaded_by: string | null; width: number | null;
+        };
+        // Written only by post_ticket_comment(); mime_type and size_bytes are
+        // overwritten from the stored object by a trigger.
+        Insert: {
+          comment_id: string; created_at?: string; file_name: string; height?: number | null;
+          id?: string; mime_type: string; position: number; size_bytes: number;
+          storage_path: string; ticket_id: string; uploaded_by?: string | null; width?: number | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["ticket_attachments"]["Row"]>;
+        Relationships: [
+          {
+            foreignKeyName: "ticket_attachments_comment_id_fkey";
+            columns: ["comment_id"];
+            isOneToOne: false;
+            referencedRelation: "ticket_comments";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ticket_attachments_ticket_id_fkey";
+            columns: ["ticket_id"];
+            isOneToOne: false;
+            referencedRelation: "tickets";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "ticket_attachments_uploaded_by_fkey";
+            columns: ["uploaded_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ticket_comments: {
         Row: {
           author_id: string | null; created_at: string; id: string;
@@ -399,6 +437,10 @@ export type Database = {
     Views: { [_ in never]: never };
     Functions: {
       auto_assign_ticket: { Args: { p_ticket_id: string }; Returns: string };
+      post_ticket_comment: {
+        Args: { p_ticket_id: string; p_message: string; p_is_internal?: boolean; p_attachments?: Json };
+        Returns: Json;
+      };
       get_notification_endpoint: { Args: never; Returns: Json };
       set_notification_endpoint: { Args: { p_url: string }; Returns: Json };
       rotate_notification_secret: { Args: never; Returns: Json };
@@ -438,6 +480,7 @@ export type Profile        = T["profiles"]["Row"];
 export type Department     = T["departments"]["Row"];
 export type Ticket         = T["tickets"]["Row"];
 export type TicketComment  = T["ticket_comments"]["Row"];
+export type TicketAttachment = T["ticket_attachments"]["Row"];
 export type TicketEvent    = T["ticket_events"]["Row"];
 export type SlaRule        = T["sla_rules"]["Row"];
 export type RoutingRule    = T["routing_rules"]["Row"];
