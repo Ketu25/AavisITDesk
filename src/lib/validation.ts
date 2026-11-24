@@ -31,11 +31,6 @@ export const updateTicketSchema = z
   })
   .refine((v) => Object.keys(v).length > 0, "Nothing to update.");
 
-export const commentSchema = z.object({
-  message: z.string().trim().min(1, "Write something first.").max(8000),
-  is_internal: z.boolean().optional().default(false),
-});
-
 export const inviteUserSchema = z.object({
   email: z.string().trim().toLowerCase().email("That is not a valid email address."),
   full_name: z.string().trim().min(1, "A name is required.").max(120),

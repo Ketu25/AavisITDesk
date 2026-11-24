@@ -1,8 +1,11 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Avatar } from "@/components/ui/avatar";
+import { LinkifiedText } from "@/components/ui/linkified-text";
 import { RAIL } from "./rail";
+import { AttachmentGallery } from "./attachment-gallery";
 import { TimeAgo } from "@/components/ui/time-ago";
 import { spring } from "@/lib/motion";
 import { cn } from "@/lib/utils";
@@ -35,6 +38,11 @@ export function MessageBubble({
   const reduced = useReducedMotion();
   const internal = comment.is_internal;
   const name = comment.author?.full_name ?? "Deleted user";
+  const hasText = comment.message.trim().length > 0;
+  const attachments = useMemo(
+    () => [...(comment.attachments ?? [])].sort((a, b) => a.position - b.position),
+    [comment.attachments],
+  );
 
   return (
     <motion.li
@@ -81,7 +89,10 @@ export function MessageBubble({
 
           <div
             className={cn(
-              "w-fit max-w-full rounded-2xl border px-3.5 py-2.5",
+              "w-fit max-w-full rounded-2xl border",
+              // An image-only message keeps the bubble — and with it the
+              // internal-note styling — but drops the padding text needs.
+              hasText ? "px-3.5 py-2.5" : "p-1.5",
               "text-[0.8125rem] leading-relaxed",
               // One squared corner points back at the author.
               own ? "rounded-br-sm" : "rounded-bl-sm",
@@ -92,7 +103,12 @@ export function MessageBubble({
                   : "border-line bg-surface text-ink-muted",
             )}
           >
-            <p className="whitespace-pre-wrap break-words">{comment.message}</p>
+            {hasText && <LinkifiedText text={comment.message} />}
+            {attachments.length > 0 && (
+              <div className={cn(hasText && "mt-2")}>
+                <AttachmentGallery attachments={attachments} />
+              </div>
+            )}
           </div>
         </div>
       </div>

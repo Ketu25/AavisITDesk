@@ -40,9 +40,13 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
 
   const [{ data: comments }, { data: events }, { data: rules }, { data: agents }] =
     await Promise.all([
+      // Images ride along under the same RLS as their message: an internal
+      // note's screenshot never reaches a requester's page.
       supabase
         .from("ticket_comments")
-        .select("*, author:profiles(id, full_name, role)")
+        .select(
+          "*, author:profiles(id, full_name, role), attachments:ticket_attachments(id, file_name, mime_type, size_bytes, width, height, position)",
+        )
         .eq("ticket_id", id)
         .order("created_at"),
       supabase

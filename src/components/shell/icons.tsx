@@ -148,6 +148,25 @@ export const Icons = {
       <path d="M4 15.6h12" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
     </svg>
   ),
+  image: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
+      <rect x="2.8" y="3.8" width="14.4" height="12.4" rx="2.2" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="7.4" cy="8.2" r="1.4" stroke="currentColor" strokeWidth="1.4" />
+      <path d="m3.4 14.6 4-3.8 2.9 2.6 2.4-2.1 4.1 3.6" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  ),
+  video: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
+      <rect x="2.6" y="5.2" width="10.6" height="9.6" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="m13.2 9 4.2-2.4v6.8L13.2 11" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+    </svg>
+  ),
+  external: ({ className }: IconProps) => (
+    <svg viewBox="0 0 20 20" fill="none" className={className ?? "size-4 flex-none"} aria-hidden>
+      <path d="M11.5 3.8h4.7v4.7M16 4 9.6 10.4" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M14.2 11.6v3.2c0 .8-.6 1.4-1.4 1.4H5.2c-.8 0-1.4-.6-1.4-1.4V7.2c0-.8.6-1.4 1.4-1.4h3.2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+    </svg>
+  ),
   // -- quick-ticket groups (QUICK_TICKET_ICONS) ------------------------------
   bolt: ({ className }: IconProps) => (
     <svg viewBox="0 0 20 20" fill="none" className={className ?? base} aria-hidden>

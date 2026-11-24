@@ -2,20 +2,23 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { PageBody, PageHeader } from "@/components/shell/page-header";
 import { Button } from "@/components/ui/button";
-import { Field, Select, Textarea } from "@/components/ui/field";
+import { Field, Select } from "@/components/ui/field";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Celebration } from "@/components/ui/celebration";
 import { useToast } from "@/components/ui/toast";
 import { TimeAgo } from "@/components/ui/time-ago";
+import { LinkifiedText } from "@/components/ui/linkified-text";
 import { Icons } from "@/components/shell/icons";
 import { PriorityPill, StatusPill } from "./pills";
 import { NewTicketButton } from "./new-ticket";
 import { SlaDial } from "./sla-instrument";
+import { ComposerPlaceholder } from "./composer/placeholder";
 import {
   TicketTimeline,
   type CommentWithAuthor,
@@ -25,10 +28,15 @@ import { api, ApiClientError } from "@/lib/api";
 import { AGENT_NEXT_STATUS, PRIORITY_META, STATUS_META } from "@/lib/constants";
 import { indexRules } from "@/lib/sla";
 import { TICKET_PRIORITIES, type SlaRule, type TicketPriority, type TicketStatus } from "@/lib/database.types";
-import { cn } from "@/lib/utils";
 import type { TicketRowData } from "./ticket-row";
 
 type Agent = { id: string; full_name: string; role: string };
+
+// Browser-only: see ComposerPlaceholder for why.
+const ReplyComposer = dynamic(
+  () => import("./composer/reply-composer").then((m) => m.ReplyComposer),
+  { ssr: false, loading: () => <ComposerPlaceholder /> },
+);
 
 export function TicketDetail({
   ticket,
@@ -48,8 +56,6 @@ export function TicketDetail({
   const router = useRouter();
   const { push } = useToast();
 
-  const [message, setMessage] = useState("");
-  const [internal, setInternal] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [celebrating, setCelebrating] = useState(false);
 
@@ -97,29 +103,6 @@ export function TicketDetail({
       title: "Ticket closed",
       description: "Thanks for confirming the fix.",
     });
-  }
-
-  async function postComment(event: React.FormEvent) {
-    event.preventDefault();
-    if (!message.trim()) return;
-    setBusy("comment");
-    try {
-      await api(`/api/tickets/${ticket.id}/comments`, {
-        method: "POST",
-        json: { message, is_internal: internal },
-      });
-      setMessage("");
-      setInternal(false);
-      router.refresh();
-    } catch (error) {
-      push({
-        tone: "error",
-        title: "Could not post that",
-        description: error instanceof ApiClientError ? error.message : "Please try again.",
-      });
-    } finally {
-      setBusy(null);
-    }
   }
 
   async function autoAssign() {
@@ -179,9 +162,10 @@ export function TicketDetail({
                   </Badge>
                 )}
               </div>
-              <p className="whitespace-pre-wrap text-[0.875rem] leading-relaxed text-ink-muted">
-                {ticket.description}
-              </p>
+              <LinkifiedText
+                text={ticket.description}
+                className="text-[0.875rem] leading-relaxed text-ink-muted"
+              />
               <p className="mt-4 border-t border-line pt-3 text-[0.75rem] text-ink-faint">
                 Raised by {ticket.creator?.full_name ?? "—"} ·{" "}
                 <TimeAgo value={ticket.created_at} />
@@ -268,46 +252,7 @@ export function TicketDetail({
                 )}
               </div>
             ) : (
-            <form onSubmit={postComment} className="card space-y-3 p-4">
-              <Textarea
-                rows={3}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder={
-                  internal
-                    ? "Internal note — the requester will not see this…"
-                    : "Add a reply…"
-                }
-                className={cn(
-                  internal &&
-                    "border-[rgb(245_158_11_/_0.4)] bg-[rgb(245_158_11_/_0.05)]",
-                )}
-              />
-              <div className="flex items-center justify-between gap-3">
-                {viewer.isAgent ? (
-                  <label className="flex cursor-pointer items-center gap-2 text-[0.8125rem] text-ink-muted">
-                    <input
-                      type="checkbox"
-                      checked={internal}
-                      onChange={(e) => setInternal(e.target.checked)}
-                      className="size-3.5 accent-[var(--accent)]"
-                    />
-                    Internal note
-                  </label>
-                ) : (
-                  <span />
-                )}
-                <Button
-                  type="submit"
-                  variant="primary"
-                  size="sm"
-                  loading={busy === "comment"}
-                  disabled={!message.trim()}
-                >
-                  {internal ? "Save note" : "Reply"}
-                </Button>
-              </div>
-            </form>
+              <ReplyComposer ticketId={ticket.id} isAgent={viewer.isAgent} />
             )}
           </div>
 
